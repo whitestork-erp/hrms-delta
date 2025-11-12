@@ -2080,8 +2080,8 @@ class SalarySlip(TransactionBase):
 			and cint(row.depends_on_payment_days)
 		):
 			amount, additional_amount = 0, 0
-		elif not row.amount:
-			amount = flt(row.default_amount) + flt(row.additional_amount)
+		elif not row.amount and row.additional_amount:
+			amount = flt(row.additional_amount)
 
 		# apply rounding
 		if frappe.db.get_value(
