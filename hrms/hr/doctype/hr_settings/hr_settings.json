@@ -12,6 +12,7 @@
   "standard_working_hours",
   "column_break_lrow",
   "retirement_age",
+  "probation_period",
   "reminders_section",
   "column_break_11",
   "send_work_anniversary_reminders",
@@ -44,6 +45,7 @@
   "attendance_settings_section",
   "allow_employee_checkin_from_mobile_app",
   "allow_geolocation_tracking",
+  "minimum_time_between_in_and_out_to_mark_attendance",
   "tenure_tab",
   "employee_exit_settings_section",
   "exit_questionnaire_web_form",
@@ -316,6 +318,23 @@
    "fieldtype": "Check",
    "label": "Prevent self approval for expense claims even if user has permissions"
   },
+  {
+   "default": "10",
+   "description": "in minutes",
+   "fieldname": "minimum_time_between_in_and_out_to_mark_attendance",
+   "fieldtype": "Float",
+   "label": "Minimum Time between IN and OUT to mark attendance",
+   "non_negative": 1,
+   "precision": "0"
+  },
+  {
+   "default": "12",
+   "description": "in months",
+   "fieldname": "probation_period",
+   "fieldtype": "Int",
+   "label": "Probation Period",
+   "non_negative": 1
+    },
   {
    "fieldname": "employee_tab",
    "fieldtype": "Tab Break",
