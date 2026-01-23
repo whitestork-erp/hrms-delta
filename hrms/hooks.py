@@ -26,6 +26,7 @@ add_to_apps_screen = [
 # app_include_css = "/assets/hrms/css/hrms.css"
 app_include_js = [
 	"hrms.bundle.js",
+    "/assets/hrms/js/utils/employee_history.js",
 ]
 app_include_css = "hrms.bundle.css"
 
