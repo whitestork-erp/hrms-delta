@@ -965,8 +965,20 @@ def get_leave_details(employee, date, for_salary_slip=False):
 		}
 
 	# is used in set query
-	lwp = frappe.get_list("Leave Type", filters={"is_lwp": 1}, pluck="name")
+	leave_without_pay = frappe.get_list(
+		"Leave Type",
+		filters={
+			"is_lwp": 1,
+		}, pluck="name",
+	)
 
+	forced_leaves = frappe.get_list(
+		"Leave Type",
+		filters={
+			"is_forced_leave": 1,
+		}, pluck="name",
+	)
+	lwp = leave_without_pay + forced_leaves
 	return {
 		"leave_allocation": leave_allocation,
 		"leave_approver": get_leave_approver(employee),
