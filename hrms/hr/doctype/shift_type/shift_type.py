@@ -117,14 +117,14 @@ class ShiftType(Document):
 			if len(logs) > 1000 or frappe.flags.test_bg_job:
 				job_id = "process_auto_attendance_" + self.name
 				job = frappe.enqueue(self._process, logs=logs, timeout=1200, job_id=job_id, deduplicate=True)
-				return f"Attendance marking has been queued. It may take a few minutes. You can monitor the job status {get_link_to_form('RQ Job',job.id,label='here')}"
+				return f"Attendance marking has been queued. It may take a few minutes. You can monitor the job status {get_link_to_form('RQ Job', job.id, label='here')}"
 			else:
 				try:
 					self._process(logs)
 					return "Attendance has been marked as per employee check-ins."
 				except Exception as e:
 					error_log = frappe.log_error(e)
-					return f"An error occured during marking attendance. Refer the full error log {get_link_to_form('Error Log',error_log.name,label='here')}"
+					return f"An error occured during marking attendance. Refer the full error log {get_link_to_form('Error Log', error_log.name, label='here')}"
 		else:
 			self._process(logs)
 
@@ -230,10 +230,45 @@ class ShiftType(Document):
 		1. These logs belongs to a single shift, single employee and it's not in a holiday date.
 		2. Logs are in chronological order
 		"""
+		if len(logs) < 2:
+			return "Invalid", 0, False, False, None, None
+
+		valid_types = {"IN", "OUT"}
+		types_in_logs = {log.log_type for log in logs}
+		if not types_in_logs.issubset(valid_types):
+			return "Invalid", 0, False, False, None, None
+
+		if "IN" not in types_in_logs or "OUT" not in types_in_logs:
+			return "Invalid", 0, False, False, None, None
+
+		in_logs = [log for log in logs if log.log_type == "IN"]
+		out_logs = [log for log in logs if log.log_type == "OUT"]
+
+		first_in = in_logs[0].time if in_logs else None
+		first_out = out_logs[0].time if out_logs else None
+
+		if not in_logs or not out_logs:
+			return "Invalid", 0, False, False, None, None
+
+		if first_out < first_in:
+			return "Invalid", 0, False, False, None, None
+
+		if first_out and first_in:
+			duration = (first_out - first_in).total_seconds()
+			# get minimum time from hr settings
+			hr_settings = frappe.get_cached_doc("HR Settings")
+			min_time_in_minutes = hr_settings.minimum_time_between_in_and_out_to_mark_attendance or 10
+			if duration < min_time_in_minutes * 60:  # convert to seconds
+				return "Invalid", 0, False, False, None, None
+
+		# --- Default logic ---
 		late_entry = early_exit = False
 		total_working_hours, in_time, out_time = calculate_working_hours(
-			logs, self.determine_check_in_and_check_out, self.working_hours_calculation_based_on
+			logs,
+			self.determine_check_in_and_check_out,
+			self.working_hours_calculation_based_on,
 		)
+
 		if (
 			cint(self.enable_late_entry_marking)
 			and in_time
