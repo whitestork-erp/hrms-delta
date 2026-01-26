@@ -60,5 +60,24 @@ frappe.ui.form.on("Employee", {
 		} else {
 			frm.set_value("custom_probation_end_date", null);
 		}
+	},
+	date_of_joining(frm) {
+		hr_setting = frappe.db.get_doc("HR Settings").then((hr_setting) => {
+			joining_date = frm.doc.date_of_joining;
+			let probation_period = hr_setting.probation_period || 0;
+			let probation_end_date = frappe.datetime.add_months(
+				joining_date,
+				probation_period
+			);
+			let current_date = frappe.datetime.get_today();
+			if (current_date < probation_end_date) {
+				frm.set_value("custom_in_probation", 1);
+				frm.set_value("custom_probation_end_date", probation_end_date);
+			} else {
+				frm.set_value("custom_in_probation", 0);
+				frm.set_value("custom_probation_end_date", null);
+			}
+		});
 	}
+
 });
