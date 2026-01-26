@@ -345,21 +345,22 @@ class PayrollEntry(Document):
 				ss.email_salary_slip()
 
 	def get_salary_component_account(self, salary_component):
-		account = frappe.db.get_value(
+		account_data = frappe.db.get_value(
 			"Salary Component Account",
 			{"parent": salary_component, "company": self.company},
-			"account",
+			["account", "payroll_payable_account"],
+			as_dict=True,
 			cache=True,
 		)
 
-		if not account:
+		if not account_data or not account_data.account:
 			frappe.throw(
 				_("Please set account in Salary Component {0}").format(
 					get_link_to_form("Salary Component", salary_component)
 				)
 			)
 
-		return account
+		return account_data
 
 	def get_salary_components(self, component_type):
 		salary_slips = self.get_sal_slip_list(ss_status=1, as_dict=True)
@@ -422,9 +423,9 @@ class PayrollEntry(Document):
 							component_type, item.employee, amount_against_cost_center
 						)
 
-			account_details = self.get_account(component_dict=component_dict)
+			account_details, component_payable_map, account_to_payable_map = self.get_account(component_dict=component_dict)
 
-			return account_details
+			return account_details, component_payable_map, account_to_payable_map
 
 	def get_advance_deduction(self, component_type: str, item: dict) -> str | None:
 		if component_type == "deductions" and item.additional_salary:
@@ -445,10 +446,11 @@ class PayrollEntry(Document):
 		cost_center: str,
 		employee_advance: str,
 	) -> None:
+		account_data = self.get_salary_component_account(item.salary_component)
 		self._advance_deduction_entries.append(
 			{
 				"employee": item.employee,
-				"account": self.get_salary_component_account(item.salary_component),
+				"account": account_data.account,
 				"amount": amount,
 				"cost_center": cost_center,
 				"reference_type": "Employee Advance",
@@ -463,16 +465,16 @@ class PayrollEntry(Document):
 		company_currency: str,
 		accounting_dimensions: list,
 		precision: int,
-		payable_amount: float,
+		payable_amount_by_account: dict,
 	):
 		for entry in self._advance_deduction_entries:
-			payable_amount = self.get_accounting_entries_and_payable_amount(
+			self.get_accounting_entries_and_payable_amount(
 				entry.get("account"),
 				entry.get("cost_center"),
 				entry.get("amount"),
 				currencies,
 				company_currency,
-				payable_amount,
+				0,  # Not tracking single payable amount anymore
 				accounting_dimensions,
 				precision,
 				entry_type="credit",
@@ -483,7 +485,13 @@ class PayrollEntry(Document):
 				is_advance="Yes",
 			)
 
-		return payable_amount
+			# Advance deductions reduce payable on default account
+			default_payable = self.payroll_payable_account
+			payable_amount_by_account[default_payable] = payable_amount_by_account.get(
+				default_payable, 0
+			) - flt(entry.get("amount"), precision)
+
+		return payable_amount_by_account
 
 	def set_employee_based_payroll_payable_entries(
 		self, component_type, employee, amount, salary_structure=None
@@ -544,14 +552,23 @@ class PayrollEntry(Document):
 
 	def get_account(self, component_dict=None):
 		account_dict = {}
+		component_payable_map = {}
+		account_to_payable_map = {}  # Map expense account to payroll payable account
+		
 		for key, amount in component_dict.items():
 			component, cost_center = key
-			account = self.get_salary_component_account(component)
-			accounting_key = (account, cost_center)
+			account_data = self.get_salary_component_account(component)
+			accounting_key = (account_data.account, cost_center)
 
 			account_dict[accounting_key] = account_dict.get(accounting_key, 0) + amount
 
-		return account_dict
+			# Track payroll payable account per component
+			if account_data.payroll_payable_account:
+				component_payable_map[component] = account_data.payroll_payable_account
+				# Also map expense account to payroll payable account for later lookup
+				account_to_payable_map[account_data.account] = account_data.payroll_payable_account
+
+		return account_dict, component_payable_map, account_to_payable_map
 
 	def make_accrual_jv_entry(self, submitted_salary_slips):
 		self.check_permission("write")
@@ -561,60 +578,57 @@ class PayrollEntry(Document):
 		self.employee_based_payroll_payable_entries = {}
 		self._advance_deduction_entries = []
 
-		earnings = (
-			self.get_salary_component_total(
-				component_type="earnings",
-				employee_wise_accounting_enabled=employee_wise_accounting_enabled,
-			)
-			or {}
+		earnings_result = self.get_salary_component_total(
+			component_type="earnings",
+			employee_wise_accounting_enabled=employee_wise_accounting_enabled,
 		)
+		earnings_accounts, earnings_payable_map, earnings_account_to_payable = earnings_result if earnings_result else ({}, {}, {})
 
-		deductions = (
-			self.get_salary_component_total(
-				component_type="deductions",
-				employee_wise_accounting_enabled=employee_wise_accounting_enabled,
-			)
-			or {}
+		deductions_result = self.get_salary_component_total(
+			component_type="deductions",
+			employee_wise_accounting_enabled=employee_wise_accounting_enabled,
 		)
+		deductions_accounts, deductions_payable_map, deductions_account_to_payable = deductions_result if deductions_result else ({}, {}, {})
 
 		precision = frappe.get_precision("Journal Entry Account", "debit_in_account_currency")
 
-		if earnings or deductions:
+		if earnings_accounts or deductions_accounts:
 			accounts = []
 			currencies = []
-			payable_amount = 0
+			payable_amount_by_account = {}  # Track payable by account instead of single amount
 			accounting_dimensions = get_accounting_dimensions() or []
 			company_currency = erpnext.get_company_currency(self.company)
 
-			payable_amount = self.get_payable_amount_for_earnings_and_deductions(
+			payable_amount_by_account = self.get_payable_amount_for_earnings_and_deductions(
 				accounts,
-				earnings,
-				deductions,
+				earnings_accounts,
+				deductions_accounts,
+				earnings_account_to_payable,
+				deductions_account_to_payable,
 				currencies,
 				company_currency,
 				accounting_dimensions,
 				precision,
-				payable_amount,
+				payable_amount_by_account,
 				employee_wise_accounting_enabled,
 			)
 
-			payable_amount = self.set_accounting_entries_for_advance_deductions(
+			payable_amount_by_account = self.set_accounting_entries_for_advance_deductions(
 				accounts,
 				currencies,
 				company_currency,
 				accounting_dimensions,
 				precision,
-				payable_amount,
+				payable_amount_by_account,
 			)
 
-			self.set_payable_amount_against_payroll_payable_account(
+			self.set_payable_amount_against_multiple_payroll_payable_accounts(
 				accounts,
 				currencies,
 				company_currency,
 				accounting_dimensions,
 				precision,
-				payable_amount,
-				self.payroll_payable_account,
+				payable_amount_by_account,
 				employee_wise_accounting_enabled,
 			)
 
@@ -683,44 +697,65 @@ class PayrollEntry(Document):
 		accounts,
 		earnings,
 		deductions,
+		earnings_account_to_payable,
+		deductions_account_to_payable,
 		currencies,
 		company_currency,
 		accounting_dimensions,
 		precision,
-		payable_amount,
+		payable_amount_by_account,
 		employee_wise_accounting_enabled,
 	):
-		# Earnings
+		# Earnings - use component-specific payroll payable account
 		for acc_cc, amount in earnings.items():
-			payable_amount = self.get_accounting_entries_and_payable_amount(
-				acc_cc[0],
+			expense_account = acc_cc[0]
+			
+			self.get_accounting_entries_and_payable_amount(
+				expense_account,
 				acc_cc[1] or self.cost_center,
 				amount,
 				currencies,
 				company_currency,
-				payable_amount,
+				0,  # Not used when we're tracking by account
 				accounting_dimensions,
 				precision,
 				entry_type="debit",
 				accounts=accounts,
 			)
 
-		# Deductions
+			# Get the payroll payable account for this expense account
+			# If component specified a payroll payable account, use it; otherwise use default
+			payable_account = earnings_account_to_payable.get(expense_account) or self.payroll_payable_account
+			payable_amount_by_account[payable_account] = payable_amount_by_account.get(
+				payable_account, 0
+			) + flt(amount, precision)
+
+		# Deductions - use component-specific payroll payable account
 		for acc_cc, amount in deductions.items():
-			payable_amount = self.get_accounting_entries_and_payable_amount(
-				acc_cc[0],
+			expense_account = acc_cc[0]
+			
+			self.get_accounting_entries_and_payable_amount(
+				expense_account,
 				acc_cc[1] or self.cost_center,
 				amount,
 				currencies,
 				company_currency,
-				payable_amount,
+				0,  # Not used when we're tracking by account
 				accounting_dimensions,
 				precision,
 				entry_type="credit",
 				accounts=accounts,
 			)
 
-		return payable_amount
+			# Get the payroll payable account for this deduction account
+			# If component specified a payroll payable account, use it; otherwise use default
+			payable_account = deductions_account_to_payable.get(expense_account) or self.payroll_payable_account
+			# Deductions reduce the payable
+			payable_amount_by_account[payable_account] = payable_amount_by_account.get(
+				payable_account, 0
+			) - flt(amount, precision)
+
+		return payable_amount_by_account
 
 	def set_payable_amount_against_payroll_payable_account(
 		self,
@@ -778,6 +813,59 @@ class PayrollEntry(Document):
 				entry_type="payable",
 				accounts=accounts,
 			)
+
+	def set_payable_amount_against_multiple_payroll_payable_accounts(
+		self,
+		accounts,
+		currencies,
+		company_currency,
+		accounting_dimensions,
+		precision,
+		payable_amount_by_account,
+		employee_wise_accounting_enabled,
+	):
+		"""
+		Create credit entries for multiple payroll payable accounts based on component mappings.
+		Falls back to default payroll payable account if no specific mapping exists.
+		"""
+		if employee_wise_accounting_enabled:
+			# Employee-wise accounting: Use default single payable account for all
+			# TODO: Future enhancement could support employee-wise with multiple payable accounts
+			default_payable = self.payroll_payable_account
+			for employee, employee_details in self.employee_based_payroll_payable_entries.items():
+				payable_amount = (employee_details.get("earnings", 0) or 0) - (
+					employee_details.get("deductions", 0) or 0
+				)
+
+				self.get_accounting_entries_and_payable_amount(
+					default_payable,
+					self.cost_center,
+					payable_amount,
+					currencies,
+					company_currency,
+					0,
+					accounting_dimensions,
+					precision,
+					entry_type="payable",
+					party=employee,
+					accounts=accounts,
+				)
+		else:
+			# Create separate credit entry for each payroll payable account
+			for payable_account, payable_amount in payable_amount_by_account.items():
+				if flt(payable_amount, precision) != 0:
+					self.get_accounting_entries_and_payable_amount(
+						payable_account,
+						self.cost_center,
+						payable_amount,
+						currencies,
+						company_currency,
+						0,
+						accounting_dimensions,
+						precision,
+						entry_type="payable",
+						accounts=accounts,
+					)
 
 	def get_accounting_entries_and_payable_amount(
 		self,
