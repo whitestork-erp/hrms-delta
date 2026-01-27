@@ -1,0 +1,217 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "autoname": "format:WARN-{YYYY}-{MM}-{#####}",
+ "creation": "2024-05-22 10:00:00",
+ "default_view": "List",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "employee",
+  "employee_name",
+  "branch",
+  "date_of_incident",
+  "column_break_1",
+  "state",
+  "violation_type",
+  "specific_violation",
+  "section_break_details",
+  "case_description",
+  "review_section",
+  "approver",
+  "final_action",
+  "review_date",
+  "section_break_signature",
+  "employee_signature",
+  "signed_on",
+  "amended_from"
+ ],
+ "fields": [
+  {
+   "fieldname": "employee",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Employee",
+   "options": "Employee",
+   "read_only_depends_on": "eval:doc.state != 'Draft'",
+   "reqd": 1
+  },
+  {
+   "fetch_from": "employee.employee_name",
+   "fieldname": "employee_name",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Employee Name",
+   "read_only": 1,
+   "reqd": 1
+  },
+  {
+   "fetch_from": "employee.branch",
+   "fieldname": "branch",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Branch",
+   "options": "Branch",
+   "read_only": 1
+  },
+  {
+   "fieldname": "date_of_incident",
+   "fieldtype": "Date",
+   "label": "Date of Incident",
+   "read_only_depends_on": "eval:doc.state != 'Draft'",
+   "reqd": 1
+  },
+  {
+   "fieldname": "column_break_1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "violation_type",
+   "fieldtype": "Link",
+   "label": "Violation Type",
+   "options": "Violation Type",
+   "read_only_depends_on": "eval:doc.state != 'Draft'",
+   "reqd": 1
+  },
+  {
+   "fieldname": "specific_violation",
+   "fieldtype": "Small Text",
+   "label": "Specific Violation",
+   "read_only_depends_on": "eval:doc.state != 'Draft'",
+   "reqd": 1
+  },
+  {
+   "fieldname": "section_break_details",
+   "fieldtype": "Section Break",
+   "label": "Incident Details"
+  },
+  {
+   "fieldname": "case_description",
+   "fieldtype": "Text Editor",
+   "label": "Case Description",
+   "read_only_depends_on": "eval:doc.state != 'Draft'",
+   "reqd": 1
+  },
+  {
+   "fieldname": "final_action",
+   "fieldtype": "Select",
+   "label": "Final Action",
+   "options": "Verbal Warning\nWritten Warning\nFinal Warning\nSuspension\nTermination"
+  },
+  {
+   "depends_on": "eval:doc.state == 'Approved' || doc.state == 'Acknowledged'",
+   "fieldname": "section_break_signature",
+   "fieldtype": "Section Break",
+   "label": "Acknowledgement"
+  },
+  {
+   "allow_on_submit": 1,
+   "depends_on": "eval:doc.state == 'Approved' || doc.state == 'Acknowledged'",
+   "fetch_from": "employee.employee_name",
+   "fieldname": "employee_signature",
+   "fieldtype": "Data",
+   "label": "Employee Signature (Name)",
+   "read_only": 1
+  },
+  {
+   "allow_on_submit": 1,
+   "depends_on": "eval:doc.state == 'Approved' || doc.state == 'Acknowledged'",
+   "fieldname": "signed_on",
+   "fieldtype": "Date",
+   "label": "Signed On"
+  },
+  {
+   "fieldname": "amended_from",
+   "fieldtype": "Link",
+   "label": "Amended From",
+   "no_copy": 1,
+   "options": "Employee Warning",
+   "print_hide": 1,
+   "read_only": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "review_section",
+   "fieldtype": "Section Break",
+   "label": "Review"
+  },
+  {
+   "fetch_from": "employee.custom_warning_approver",
+   "fieldname": "approver",
+   "fieldtype": "Link",
+   "label": "Approver",
+   "options": "User",
+   "read_only": 1,
+   "reqd": 1
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "state",
+   "fieldtype": "Select",
+   "label": "state",
+   "options": "Draft\nPending\nApproved\nRejected\nAcknowledged",
+   "read_only": 1
+  },
+  {
+   "fieldname": "review_date",
+   "fieldtype": "Date",
+   "label": "Review Date",
+   "read_only": 1
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "is_submittable": 1,
+ "links": [],
+ "modified": "2026-01-23 10:45:01.603531",
+ "modified_by": "Administrator",
+ "module": "HR",
+ "name": "Employee Warning",
+ "naming_rule": "Expression",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "submit": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "email": 1,
+   "print": 1,
+   "read": 1,
+   "role": "Branch Manager - MH",
+   "submit": 1,
+   "write": 1
+  },
+  {
+   "email": 1,
+   "print": 1,
+   "read": 1,
+   "role": "Operations Manager - MH",
+   "submit": 1,
+   "write": 1
+  },
+  {
+   "email": 1,
+   "print": 1,
+   "read": 1,
+   "role": "HR Manager - MH",
+   "submit": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "track_changes": 1
+}

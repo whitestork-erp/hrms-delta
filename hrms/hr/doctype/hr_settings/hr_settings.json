@@ -320,6 +320,23 @@
    "label": "Prevent self approval for expense claims even if user has permissions"
   },
   {
+   "default": "10",
+   "description": "in minutes",
+   "fieldname": "minimum_time_between_in_and_out_to_mark_attendance",
+   "fieldtype": "Float",
+   "label": "Minimum Time between IN and OUT to mark attendance",
+   "non_negative": 1,
+   "precision": "0"
+  },
+  {
+   "default": "12",
+   "description": "in months",
+   "fieldname": "probation_period",
+   "fieldtype": "Int",
+   "label": "Probation Period",
+   "non_negative": 1
+    },
+  {
    "fieldname": "employee_tab",
    "fieldtype": "Tab Break",
    "label": "Employee"
