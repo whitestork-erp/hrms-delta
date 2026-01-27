@@ -38,6 +38,12 @@ and this project adheres to a custom versioning scheme: `v{upstream-version}+ws{
   - Replaced dictionary-based field aggregation syntax with string-based SQL syntax
   - Changed from `{"SUM": "field"}` to `"SUM(field) as alias"` format
 
+-  Query builder syntax compatibility with Frappe's query builder
+  - Replaced dictionary-based field aggregation syntax with string-based SQL syntax
+  - Changed from `fields=[{"SUM": "amount", "as": "total_amount"}],` to `["SUM(amount) as total_amount"]` format
+  - Changed from `fields=[{"SUM": "net_pay", "as": "net_sum"}, {"SUM": "gross_pay", "as": "gross_sum"}]` to `fields=["SUM(net_pay) as net_sum", "SUM(gross_pay) as gross_sum"]` format
+  in `salary_slip.py`
+
 ### Changed
 
 - Employee Advance base amount field operations
