@@ -1,6 +1,8 @@
 # Copyright (c) 2022, Frappe Technologies Pvt. Ltd. and Contributors
 # License: GNU General Public License v3. See license.txt
 
+from itertools import groupby
+
 import frappe
 from frappe import _
 from frappe.model.naming import set_name_by_naming_series
@@ -24,40 +26,6 @@ class EmployeeMaster(Employee):
 				self.name = self.employee_name
 
 		self.employee = self.name
-
-	def get_contact_email(self):
-		email = None
-		if self.company_email:
-			email = self.company_email
-		elif self.personal_email:
-			email = self.personal_email
-		elif self.user_id:
-			email = frappe.db.get_value("User", self.user_id, "email")
-		return email
-
-	def send_probation_completion_email(self):
-		"""Sends an email notification to the HR Manager when an employee's probation period is completed."""
-		if not self.reports_to:
-			return
-		manager_doc = frappe.get_doc("Employee", self.reports_to)
-
-		if not manager_doc:
-			return
-
-		manager_email = manager_doc.get_contact_email()
-
-
-		if not manager_doc.get_contact_email():
-			return
-
-		subject = f"Probation Period Completed for Employee: {self.employee_name}"
-		message = f"The probation period for employee {self.employee_name} has been completed today. Please review their performance and take necessary actions."
-
-		frappe.sendmail(
-			recipients=[manager_email],
-			subject=subject,
-			message=message,
-		)
 
 
 def validate_onboarding_process(doc, method=None):
@@ -189,11 +157,12 @@ def get_retirement_date(date_of_birth=None):
 			return
 
 
-@frappe.whitelist()
 def process_daily_probation_check():
-	"""Get all employees whose probation period ends today and send an email notification to their Managers."""
+	"""Get all employees whose probation period ends today and send an email notification to their Managers and to HR manager."""
 
 	today = getdate()
+
+	# get all employees whose probation period ends today
 	employees = frappe.get_all(
 		"Employee",
 		filters={
@@ -201,10 +170,59 @@ def process_daily_probation_check():
 			"custom_in_probation": 1,
 			"status": "Active",
 		},
-		fields=["name"],
+		fields=["name", "reports_to", "employee_name"],
+		order_by="reports_to asc",
 	)
 
 
+	if not employees:
+		return
+
+	# group employees that have the same reports_to
+	employees_grouped_by_manager = groupby(employees, key=lambda x: x.reports_to)
+
+	# send emails for direct manager (reports_to)
+	for manager, emp_group in employees_grouped_by_manager:
+		if not manager:
+			continue
+
+		emp_list = list(emp_group)
+		manager_email = frappe.db.get_value("Employee", manager, "company_email") or frappe.db.get_value(
+			"Employee", manager, "personal_email"
+		)
+
+		if not manager_email:
+			continue
+
+		subject = "Probation Period Ended for Employees"
+		message = "The probation period for the following employees has ended today:<br><br>"
+
+		for employee in emp_list:
+			message += f"- {employee.employee_name} ({employee.name})<br>"
+
+		message += "<br>Please review their performance and take necessary actions."
+
+		frappe.sendmail(
+			recipients=[manager_email],
+			subject=subject,
+			message=message,
+		)
+
+	# send summary to HR Manager
+	hr_manager = frappe.db.get_single_value("HR Settings", "hr_manager")
+	if not hr_manager:
+		return
+
+	subject = "Summary: Probation Period Ended (All Employees)"
+	message = "The probation period for the following employees has ended today:<br><br>"
+
 	for emp in employees:
-		emp_doc = frappe.get_doc("Employee", emp.name)
-		emp_doc.send_probation_completion_email()
+		message += f"- {emp.employee_name} ({emp.name})<br>"
+
+	message += "<br>Please review their performance and take necessary actions."
+
+	frappe.sendmail(
+		recipients=[hr_manager],
+		subject=subject,
+		message=message,
+	)

@@ -8,6 +8,7 @@
  "field_order": [
   "employee_tab",
   "employee_settings_section",
+  "hr_manager",
   "emp_created_by",
   "standard_working_hours",
   "column_break_lrow",
@@ -45,6 +46,7 @@
   "attendance_settings_section",
   "allow_employee_checkin_from_mobile_app",
   "allow_geolocation_tracking",
+  "minimum_time_between_in_and_out_to_mark_attendance",
   "tenure_tab",
   "employee_exit_settings_section",
   "exit_questionnaire_web_form",
@@ -328,7 +330,7 @@
    "label": "Expenses"
   },
   {
-   "default": "3",
+   "default": "12",
    "description": "in months",
    "fieldname": "probation_period",
    "fieldtype": "Int",
@@ -383,13 +385,29 @@
    "fieldname": "employee_exit_settings_section",
    "fieldtype": "Section Break",
    "label": "Employee Exit Settings"
+  },
+  {
+   "fieldname": "hr_manager",
+   "fieldtype": "Link",
+   "label": "HR Manager",
+   "link_filters": "[[\"User\",\"role\",\"=\",\"HR Manager\"]]",
+   "options": "User"
+  },
+  {
+   "default": "10",
+   "description": "in minutes",
+   "fieldname": "minimum_time_between_in_and_out_to_mark_attendance",
+   "fieldtype": "Float",
+   "label": "Minimum Time between IN and OUT to mark attendance",
+   "non_negative": 1,
+   "precision": "0"
   }
  ],
  "icon": "fa fa-cog",
  "idx": 1,
  "issingle": 1,
  "links": [],
- "modified": "2025-12-29 16:25:06.271352",
+ "modified": "2026-01-27 10:34:07.936387",
  "modified_by": "Administrator",
  "module": "HR",
  "name": "HR Settings",
