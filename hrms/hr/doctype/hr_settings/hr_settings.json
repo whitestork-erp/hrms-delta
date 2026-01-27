@@ -8,6 +8,7 @@
  "field_order": [
   "employee_tab",
   "employee_settings_section",
+  "hr_manager",
   "emp_created_by",
   "standard_working_hours",
   "column_break_lrow",
@@ -19,6 +20,7 @@
   "send_birthday_reminders",
   "send_holiday_reminders",
   "frequency",
+  "notify_hr_manager_on_probation_end",
   "column_break_hyec",
   "sender",
   "sender_email",
@@ -334,7 +336,7 @@
    "fieldtype": "Int",
    "label": "Probation Period",
    "non_negative": 1
-    },
+  },
   {
    "fieldname": "employee_tab",
    "fieldtype": "Tab Break",
@@ -393,13 +395,26 @@
    "fieldname": "employee_exit_settings_section",
    "fieldtype": "Section Break",
    "label": "Employee Exit Settings"
+  },
+  {
+   "fieldname": "hr_manager",
+   "fieldtype": "Link",
+   "label": "HR Manager",
+   "link_filters": "[[\"User\",\"role\",\"=\",\"HR Manager\"]]",
+   "options": "User"
+  },
+  {
+   "default": "1",
+   "fieldname": "notify_hr_manager_on_probation_end",
+   "fieldtype": "Check",
+   "label": "Notify HR manager on Probation End"
   }
  ],
  "icon": "fa fa-cog",
  "idx": 1,
  "issingle": 1,
  "links": [],
- "modified": "2025-12-29 16:25:06.271352",
+ "modified": "2026-01-27 11:26:47.354354",
  "modified_by": "Administrator",
  "module": "HR",
  "name": "HR Settings",

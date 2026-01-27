@@ -30,6 +30,11 @@ and this project adheres to a custom versioning scheme: `v{upstream-version}+ws{
   - Updated the query so that forced leaves are fetched without allocation in `leave_application.py`
   - Bypass validating allocations for forced leaves in `leave_application.py`
 
+- Probation Period
+  - Added `Probation Period`, `HR Manager` and `notify_hr_manager_on_probation_end` fields to HR Settings.
+  - Implemented bulk email notification to employees managers `(reports_to)` and to `HR manager` upon completion of an employee's probation period.
+  - Created a daily check to identify employees whose probation ends and notify their managers.
+
 ### Removed
 
 - Half holiday functionality in `shift_type.py`
