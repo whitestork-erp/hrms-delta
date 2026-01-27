@@ -404,7 +404,7 @@
    "options": "User"
   },
   {
-   "default": "0",
+   "default": "1",
    "fieldname": "notify_hr_manager_on_probation_end",
    "fieldtype": "Check",
    "label": "Notify HR manager on Probation End"
