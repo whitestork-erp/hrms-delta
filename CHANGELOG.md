@@ -14,6 +14,17 @@ and this project adheres to a custom versioning scheme: `v{upstream-version}+ws{
     - Handled `Invalid` status based on check-in and check-out entries
     - Added `minimum_time_between_in_and_out_to_mark_attendance` configuration in HR settings
 
+
+- Employee Warning
+    - Created new DocType for `Employee Warning` with fields for employee details, incident date, violation type, and final action. `(employee_warning.py)`
+    - Created `Violation Type` DocType with a single field for violation name. `(violation_type.py)`
+    - Created `Employee Warning` approval workflow. `(employee_warning_workflow.json)`
+
+- Employee History
+    - Implemented employee history api methods to get employee history related to warnings. `(employee_history.py)`
+    - Implemented JavaScript functionality to show employee history related to warnings. `(employee_history.js)`
+    - Added utility JavaScript for displaying employee history in a modal with tabs for different data types. `(employee_history.js)`
+
 - Leave without allocation
   - Added `is_forced_leave` check in `Leave Type` doctype
   - Updated the query so that forced leaves are fetched without allocation in `leave_application.py`
