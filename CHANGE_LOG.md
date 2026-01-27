@@ -4,7 +4,7 @@
 All notable changes to the Medis HRMS fork will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
-and this project adheres to a custom versioning scheme: `v{upstream-version}+medis{patch}`.
+and this project adheres to a custom versioning scheme: `v{upstream-version}+ws{patch}`.
 
 ## [Unreleased]
 
