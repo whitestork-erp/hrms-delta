@@ -22,6 +22,7 @@
   "allow_over_allocation",
   "include_holiday",
   "is_compensatory",
+  "is_forced_leave",
   "carry_forward_section",
   "maximum_carry_forwarded_leaves",
   "expire_carry_forwarded_leaves_after_days",
@@ -230,12 +231,19 @@
    "fieldtype": "Int",
    "label": "Non-Encashable Leaves",
    "non_negative": 1
+  },
+  {
+   "default": "0",
+   "description": "If checked no allocation needed for this type.",
+   "fieldname": "is_forced_leave",
+   "fieldtype": "Check",
+   "label": "Is Forced Leave"
   }
  ],
  "icon": "fa fa-flag",
  "idx": 1,
  "links": [],
- "modified": "2024-12-18 19:51:44.162375",
+ "modified": "2026-01-23 11:37:20.877928",
  "modified_by": "Administrator",
  "module": "HR",
  "name": "Leave Type",
@@ -269,6 +277,7 @@
    "role": "Employee"
   }
  ],
+ "row_format": "Dynamic",
  "sort_field": "creation",
  "sort_order": "DESC",
  "states": [],

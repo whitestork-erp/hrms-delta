@@ -1,6 +1,8 @@
 # Copyright (c) 2022, Frappe Technologies Pvt. Ltd. and Contributors
 # License: GNU General Public License v3. See license.txt
 
+from itertools import groupby
+
 import frappe
 from frappe import _
 from frappe.model.naming import set_name_by_naming_series
@@ -153,3 +155,77 @@ def get_retirement_date(date_of_birth=None):
 		except ValueError:
 			# invalid date
 			return
+
+
+def process_daily_probation_check():
+	"""Get all employees whose probation period ends today and send an email notification to their Managers and to HR manager."""
+
+	notification_enabled = frappe.db.get_single_value("HR Settings", "notify_hr_manager_on_probation_end")
+	if not notification_enabled:
+		return
+
+	today = getdate()
+
+	# get all employees whose probation period ends today
+	employees = frappe.get_all(
+		"Employee",
+		filters={
+			"custom_probation_end_date": today,
+			"custom_in_probation": 1,
+			"status": "Active",
+		},
+		fields=["name", "reports_to", "employee_name"],
+		order_by="reports_to asc",
+	)
+
+	if not employees:
+		return
+
+	# group employees that have the same reports_to
+	employees_grouped_by_manager = groupby(employees, key=lambda x: x.reports_to)
+
+	# send emails for direct manager (reports_to)
+	for manager, emp_group in employees_grouped_by_manager:
+		if not manager:
+			continue
+
+		emp_list = list(emp_group)
+		manager_email = frappe.db.get_value("Employee", manager, "company_email") or frappe.db.get_value(
+			"Employee", manager, "personal_email"
+		)
+
+		if not manager_email:
+			continue
+
+		subject = "Probation Period Ended for Employees"
+		message = "The probation period for the following employees has ended today:<br><br>"
+
+		for employee in emp_list:
+			message += f"- {employee.employee_name} ({employee.name})<br>"
+
+		message += "<br>Please review their performance and take necessary actions."
+
+		frappe.sendmail(
+			recipients=[manager_email],
+			subject=subject,
+			message=message,
+		)
+
+	# send summary to HR Manager
+	hr_manager = frappe.db.get_single_value("HR Settings", "hr_manager")
+	if not hr_manager:
+		return
+
+	subject = "Summary: Probation Period Ended (All Employees)"
+	message = "The probation period for the following employees has ended today:<br><br>"
+
+	for emp in employees:
+		message += f"- {emp.employee_name} ({emp.name})<br>"
+
+	message += "<br>Please review their performance and take necessary actions."
+
+	frappe.sendmail(
+		recipients=[hr_manager],
+		subject=subject,
+		message=message,
+	)
