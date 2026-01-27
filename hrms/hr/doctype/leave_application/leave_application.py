@@ -215,6 +215,9 @@ class LeaveApplication(Document, PWANotificationsMixin):
 		if frappe.db.get_value("Leave Type", self.leave_type, "allow_negative"):
 			return
 
+		if frappe.db.get_value("Leave Type", self.leave_type, "is_forced_leave"):
+			return
+
 		alloc_on_from_date, alloc_on_to_date = self.get_allocation_based_on_application_dates()
 
 		if not (alloc_on_from_date or alloc_on_to_date):
@@ -423,7 +426,7 @@ class LeaveApplication(Document, PWANotificationsMixin):
 					)
 				)
 
-			if not is_lwp(self.leave_type):
+			if not is_lwp(self.leave_type) and not frappe.db.get_value("Leave Type", self.leave_type, "is_forced_leave"):
 				leave_balance = get_leave_balance_on(
 					self.employee,
 					self.leave_type,
@@ -965,8 +968,20 @@ def get_leave_details(employee, date, for_salary_slip=False):
 		}
 
 	# is used in set query
-	lwp = frappe.get_list("Leave Type", filters={"is_lwp": 1}, pluck="name")
+	leave_without_pay = frappe.get_list(
+		"Leave Type",
+		filters={
+			"is_lwp": 1,
+		}, pluck="name",
+	)
 
+	forced_leaves = frappe.get_list(
+		"Leave Type",
+		filters={
+			"is_forced_leave": 1,
+		}, pluck="name",
+	)
+	lwp = leave_without_pay + forced_leaves
 	return {
 		"leave_allocation": leave_allocation,
 		"leave_approver": get_leave_approver(employee),

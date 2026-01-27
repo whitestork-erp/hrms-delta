@@ -25,6 +25,11 @@ and this project adheres to a custom versioning scheme: `v{upstream-version}+ws{
     - Implemented JavaScript functionality to show employee history related to warnings. `(employee_history.js)`
     - Added utility JavaScript for displaying employee history in a modal with tabs for different data types. `(employee_history.js)`
 
+- Leave without allocation
+  - Added `is_forced_leave` check in `Leave Type` doctype
+  - Updated the query so that forced leaves are fetched without allocation in `leave_application.py`
+  - Bypass validating allocations for forced leaves in `leave_application.py`
+
 ### Removed
 
 - Half holiday functionality in `shift_type.py`
