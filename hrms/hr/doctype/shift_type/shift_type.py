@@ -21,7 +21,7 @@ from frappe.utils import (
 )
 
 from erpnext.setup.doctype.employee.employee import get_holiday_list_for_employee
-from erpnext.setup.doctype.holiday_list.holiday_list import is_half_holiday, is_holiday
+from erpnext.setup.doctype.holiday_list.holiday_list import is_holiday
 
 from hrms.hr.doctype.attendance.attendance import mark_attendance
 from hrms.hr.doctype.employee_checkin.employee_checkin import (
@@ -117,14 +117,14 @@ class ShiftType(Document):
 			if len(logs) > 1000 or frappe.flags.test_bg_job:
 				job_id = "process_auto_attendance_" + self.name
 				job = frappe.enqueue(self._process, logs=logs, timeout=1200, job_id=job_id, deduplicate=True)
-				return f"Attendance marking has been queued. It may take a few minutes. You can monitor the job status {get_link_to_form('RQ Job',job.id,label='here')}"
+				return f"Attendance marking has been queued. It may take a few minutes. You can monitor the job status {get_link_to_form('RQ Job', job.id, label='here')}"
 			else:
 				try:
 					self._process(logs)
 					return "Attendance has been marked as per employee check-ins."
 				except Exception as e:
 					error_log = frappe.log_error(e)
-					return f"An error occured during marking attendance. Refer the full error log {get_link_to_form('Error Log',error_log.name,label='here')}"
+					return f"An error occured during marking attendance. Refer the full error log {get_link_to_form('Error Log', error_log.name, label='here')}"
 		else:
 			self._process(logs)
 
@@ -148,9 +148,9 @@ class ShiftType(Document):
 			working_hours_threshold_for_half_day = flt(self.working_hours_threshold_for_half_day)
 			working_hours_threshold_for_absent = flt(self.working_hours_threshold_for_absent)
 
-			if self.is_half_holiday(employee, attendance_date):
-				working_hours_threshold_for_half_day = flt(self.working_hours_threshold_for_half_day) / 2
-				working_hours_threshold_for_absent = flt(self.working_hours_threshold_for_absent) / 2
+			# if self.is_half_holiday(employee, attendance_date):
+			# 	working_hours_threshold_for_half_day = flt(self.working_hours_threshold_for_half_day) / 2
+			# 	working_hours_threshold_for_absent = flt(self.working_hours_threshold_for_absent) / 2
 
 			overtime_type = single_shift_logs[0].get("overtime_type")
 			(
@@ -190,11 +190,11 @@ class ShiftType(Document):
 
 			frappe.db.commit()  # nosemgrep
 
-	def is_half_holiday(self, employee, attendance_date):
-		holiday_list = self.get_holiday_list(employee, attendance_date)
-		if is_half_holiday(holiday_list, attendance_date):
-			return True
-		return False
+	# def is_half_holiday(self, employee, attendance_date):
+	# 	holiday_list = self.get_holiday_list(employee, attendance_date)
+	# 	if is_half_holiday(holiday_list, attendance_date):
+	# 		return True
+	# 	return False
 
 	def get_employee_checkins(self) -> list[dict]:
 		return frappe.get_all(
@@ -230,10 +230,45 @@ class ShiftType(Document):
 		1. These logs belongs to a single shift, single employee and it's not in a holiday date.
 		2. Logs are in chronological order
 		"""
+		if len(logs) < 2:
+			return "Invalid", 0, False, False, None, None
+
+		valid_types = {"IN", "OUT"}
+		types_in_logs = {log.log_type for log in logs}
+		if not types_in_logs.issubset(valid_types):
+			return "Invalid", 0, False, False, None, None
+
+		if "IN" not in types_in_logs or "OUT" not in types_in_logs:
+			return "Invalid", 0, False, False, None, None
+
+		in_logs = [log for log in logs if log.log_type == "IN"]
+		out_logs = [log for log in logs if log.log_type == "OUT"]
+
+		first_in = in_logs[0].time if in_logs else None
+		first_out = out_logs[0].time if out_logs else None
+
+		if not in_logs or not out_logs:
+			return "Invalid", 0, False, False, None, None
+
+		if first_out < first_in:
+			return "Invalid", 0, False, False, None, None
+
+		if first_out and first_in:
+			duration = (first_out - first_in).total_seconds()
+			# get minimum time from hr settings
+			hr_settings = frappe.get_cached_doc("HR Settings")
+			min_time_in_minutes = hr_settings.minimum_time_between_in_and_out_to_mark_attendance or 10
+			if duration < min_time_in_minutes * 60:  # convert to seconds
+				return "Invalid", 0, False, False, None, None
+
+		# --- Default logic ---
 		late_entry = early_exit = False
 		total_working_hours, in_time, out_time = calculate_working_hours(
-			logs, self.determine_check_in_and_check_out, self.working_hours_calculation_based_on
+			logs,
+			self.determine_check_in_and_check_out,
+			self.working_hours_calculation_based_on,
 		)
+
 		if (
 			cint(self.enable_late_entry_marking)
 			and in_time

@@ -223,37 +223,98 @@ def mark_attendance_and_link_log(
 	if attendance_status == "Skip":
 		skip_attendance_in_checkins(log_names)
 		return None
+	elif attendance_status in ("Present", "Absent", "Half Day", "Invalid"):
+		try:
+			frappe.db.savepoint("attendance_creation")
+			if attendance := get_existing_half_day_attendance(employee, attendance_date):
+				# Build update dict
+				update_dict = {
+					"working_hours": working_hours,
+					"shift": shift,
+					"late_entry": late_entry,
+					"early_exit": early_exit,
+					"in_time": in_time,
+					"out_time": out_time,
+					"half_day_status": "Absent" if attendance_status == "Absent" else "Present",
+					"modify_half_day_status": 0,
+				}
 
-	if attendance_status not in ("Present", "Absent", "Half Day"):
-		frappe.throw(_("{0} is an invalid Attendance Status.").format(attendance_status))
+				# Add overtime fields if applicable
+				if overtime_type and attendance_status == "Present" and working_hours:
+					from hrms.hr.doctype.employee_checkin.employee_checkin import get_overtime_data
 
-	try:
-		frappe.db.savepoint("attendance_creation")
+					overtime_data = get_overtime_data(shift, working_hours)
+					if overtime_data:
+						update_dict.update(
+							{
+								"overtime_type": overtime_type,
+								"standard_working_hours": overtime_data.get("standard_working_hours"),
+								"actual_overtime_duration": overtime_data.get("actual_overtime_duration"),
+							}
+						)
 
-		attendance = create_or_update_attendance(
-			employee=employee,
-			attendance_date=attendance_date,
-			attendance_status=attendance_status,
-			working_hours=working_hours,
-			shift=shift,
-			late_entry=late_entry,
-			early_exit=early_exit,
-			in_time=in_time,
-			out_time=out_time,
-			overtime_type=overtime_type,
-		)
-
-		if attendance_status == "Absent":
-			attendance.add_comment(
-				text=_("Employee was marked Absent for not meeting the working hours threshold.")
+				frappe.db.set_value(
+					"Attendance",
+					attendance.name,
+					update_dict,
+				)
+				update_attendance_in_checkins(log_names, attendance.name)
+				return attendance
+			else:
+				attendance = frappe.new_doc("Attendance")
+			attendance.update(
+				{
+					"doctype": "Attendance",
+					"employee": employee,
+					"attendance_date": attendance_date,
+					"status": attendance_status,
+					"working_hours": working_hours,
+					"shift": shift,
+					"late_entry": late_entry,
+					"early_exit": early_exit,
+					"in_time": in_time,
+					"out_time": out_time,
+					"half_day_status": "Absent" if attendance_status == "Half Day" else None,
+				}
 			)
 
-		update_attendance_in_checkins(log_names, attendance.name)
-		return attendance
+			# Calculate and set overtime data if applicable
+			if overtime_type and attendance_status == "Present" and working_hours:
+				from hrms.hr.doctype.employee_checkin.employee_checkin import get_overtime_data
 
-	except frappe.ValidationError as e:
-		handle_attendance_exception(log_names, e)
-		return None
+				overtime_data = get_overtime_data(shift, working_hours)
+				if overtime_data:
+					attendance.update(
+						{
+							"overtime_type": overtime_type,
+							"standard_working_hours": overtime_data.get("standard_working_hours"),
+							"actual_overtime_duration": overtime_data.get("actual_overtime_duration"),
+						}
+					)
+
+			if attendance_status == "Invalid":
+				attendance.docstatus = 0
+				attendance.insert(ignore_permissions=True)
+				attendance.db_set("status", "Invalid")
+				frappe.db.commit()
+			else:
+				attendance.submit()
+
+			if attendance_status == "Absent":
+				attendance.add_comment(
+					text=_("Employee was marked Absent for not meeting the working hours threshold.")
+				)
+
+			update_attendance_in_checkins(log_names, attendance.name)
+			return attendance
+
+		except frappe.ValidationError as e:
+			handle_attendance_exception(log_names, e)
+			return None
+
+	else:
+		# Fallback
+		frappe.throw(_("{} is an invalid Attendance Status.").format(attendance_status))
 
 
 def create_or_update_attendance(
