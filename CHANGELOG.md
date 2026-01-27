@@ -35,6 +35,11 @@ and this project adheres to a custom versioning scheme: `v{upstream-version}+ws{
   - Implemented bulk email notification to employees managers `(reports_to)` and to `HR manager` upon completion of an employee's probation period.
   - Created a daily check to identify employees whose probation ends and notify their managers.
 
+- Multiple payroll payable accounts
+  - Added payroll_payable_account field to Salary Component Account
+  - Create separate journal entry credits for each payroll payable account
+  - Maintain backwards compatibility with default payroll payable account
+  Components can now optionally specify their own payroll payable account, allowing different salary components to be credited to different liability accounts (e.g., Basic Salary → 428XXX, Benefits → 451XXX)
 ### Removed
 
 - Half holiday functionality in `shift_type.py`
