@@ -8,6 +8,11 @@ and this project adheres to a custom versioning scheme: `v{upstream-version}+ws{
 
 ## [Unreleased]
 
+
+
+
+## [v16.1.0+ws-hrms1 - 27-01-2026]
+
 ### Added
 - Invalid status for Attendance
     - Added `Invalid` status to `Attendance` doctype
