@@ -14,6 +14,11 @@ and this project adheres to a custom versioning scheme: `v{upstream-version}+ws{
     - Handled `Invalid` status based on check-in and check-out entries
     - Added `minimum_time_between_in_and_out_to_mark_attendance` configuration in HR settings
 
+- Leave without allocation
+  - Added `is_forced_leave` check in `Leave Type` doctype
+  - Updated the query so that forced leaves are fetched without allocation in `leave_application.py`
+  - Bypass validating allocations for forced leaves in `leave_application.py`
+
 ### Removed
 
 - Half holiday functionality in `shift_type.py`
