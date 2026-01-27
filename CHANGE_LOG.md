@@ -46,4 +46,4 @@ and this project adheres to a custom versioning scheme: `v{upstream-version}+ws{
 
 ## Contributing
 
-This is a private fork maintained for Medis-specific requirements. For general HRMS improvements, please contribute to the [upstream repository](https://github.com/frappe/hrms).
+This is a private fork maintained for WS-specific requirements. For general HRMS improvements, please contribute to the [upstream repository](https://github.com/frappe/hrms).
