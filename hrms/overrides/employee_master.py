@@ -160,6 +160,10 @@ def get_retirement_date(date_of_birth=None):
 def process_daily_probation_check():
 	"""Get all employees whose probation period ends today and send an email notification to their Managers and to HR manager."""
 
+	notification_enabled = frappe.db.get_single_value("HR Settings", "notify_hr_manager_on_probation_end")
+	if not notification_enabled:
+		return
+
 	today = getdate()
 
 	# get all employees whose probation period ends today
@@ -173,7 +177,6 @@ def process_daily_probation_check():
 		fields=["name", "reports_to", "employee_name"],
 		order_by="reports_to asc",
 	)
-
 
 	if not employees:
 		return

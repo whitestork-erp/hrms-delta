@@ -20,6 +20,7 @@
   "send_birthday_reminders",
   "send_holiday_reminders",
   "frequency",
+  "notify_hr_manager_on_probation_end",
   "column_break_hyec",
   "sender",
   "sender_email",
@@ -335,7 +336,7 @@
    "fieldtype": "Int",
    "label": "Probation Period",
    "non_negative": 1
-    },
+  },
   {
    "fieldname": "employee_tab",
    "fieldtype": "Tab Break",
@@ -345,14 +346,6 @@
    "fieldname": "expenses_tab",
    "fieldtype": "Tab Break",
    "label": "Expenses"
-  },
-  {
-   "default": "12",
-   "description": "in months",
-   "fieldname": "probation_period",
-   "fieldtype": "Int",
-   "label": "Probation Period",
-   "non_negative": 1
   },
   {
    "fieldname": "shift_and_attendance_tab",
@@ -411,20 +404,17 @@
    "options": "User"
   },
   {
-   "default": "10",
-   "description": "in minutes",
-   "fieldname": "minimum_time_between_in_and_out_to_mark_attendance",
-   "fieldtype": "Float",
-   "label": "Minimum Time between IN and OUT to mark attendance",
-   "non_negative": 1,
-   "precision": "0"
+   "default": "0",
+   "fieldname": "notify_hr_manager_on_probation_end",
+   "fieldtype": "Check",
+   "label": "Notify HR manager on Probation End"
   }
  ],
  "icon": "fa fa-cog",
  "idx": 1,
  "issingle": 1,
  "links": [],
- "modified": "2026-01-27 10:34:07.936387",
+ "modified": "2026-01-27 11:26:47.354354",
  "modified_by": "Administrator",
  "module": "HR",
  "name": "HR Settings",
