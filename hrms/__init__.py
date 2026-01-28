@@ -1,6 +1,6 @@
 import frappe
 
-__version__ = "v16.1.0+ws-hrms1"
+__version__ = "v16.1.0+ws-hrms2"
 
 
 def refetch_resource(cache_key: str | list, user=None):
