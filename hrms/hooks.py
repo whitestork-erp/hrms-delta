@@ -9,6 +9,22 @@ source_link = "http://github.com/frappe/hrms"
 app_logo_url = "/assets/hrms/images/frappe-hr-logo.svg"
 app_home = "/desk/people"
 
+
+fixtures = [
+	{
+		"dt": "Workflow",
+		"filters": [
+			[
+				"name",
+				"in",
+				[
+					"Employee Advanced Workflow",
+				],
+			]
+		],
+	}
+]
+
 add_to_apps_screen = [
 	{
 		"name": "hrms",
@@ -26,7 +42,7 @@ add_to_apps_screen = [
 # app_include_css = "/assets/hrms/css/hrms.css"
 app_include_js = [
 	"hrms.bundle.js",
-    "/assets/hrms/js/utils/employee_history.js",
+	"/assets/hrms/js/utils/employee_history.js",
 ]
 app_include_css = "hrms.bundle.css"
 
@@ -239,7 +255,7 @@ scheduler_events = {
 		"hrms.hr.doctype.daily_work_summary_group.daily_work_summary_group.send_summary",
 		"hrms.hr.doctype.interview.interview.send_daily_feedback_reminder",
 		"hrms.hr.doctype.job_opening.job_opening.close_expired_job_openings",
-        "hrms.overrides.employee_master.process_daily_probation_check",
+		"hrms.overrides.employee_master.process_daily_probation_check",
 	],
 	"daily_long": [
 		"hrms.hr.doctype.leave_ledger_entry.leave_ledger_entry.process_expired_allocation",
