@@ -111,14 +111,7 @@ class PayrollEntry(Document):
 			"Account", self.payroll_payable_account, "account_type"
 		)
 		if payroll_payable_account_type != "Payable":
-			frappe.throw(
-				_(
-					"Account type should be set {0} for payroll payable account {1}, please set and try again"
-				).format(
-					frappe.bold("Payable"),
-					frappe.bold(get_link_to_form("Account", self.payroll_payable_account)),
-				)
-			)
+			pass
 
 	def on_cancel(self):
 		self.ignore_linked_doctypes = ("GL Entry", "Salary Slip", "Journal Entry")
@@ -963,12 +956,14 @@ class PayrollEntry(Document):
 		    
 
 		if party:
-			row.update(
-				{
-					"party_type": "Employee",
-					"party": party,
-				}
-			)
+			account_type = frappe.get_cached_value("Account", account, "account_type")
+			if account_type in ("Payable", "Receivable"):
+				row.update(
+					{
+						"party_type": "Employee",
+						"party": party,
+					}
+				)
 
 		if reference_type:
 			row.update(
