@@ -944,13 +944,23 @@ class PayrollEntry(Document):
 				}
 			)
 		else:
-			row.update(
-				{
-					"credit_in_account_currency": flt(amt, precision),
-					"reference_type": self.doctype,
-					"reference_name": self.name,
-				}
-			)
+			if  amount < 0:
+				row.update(
+					{
+						"debit_in_account_currency": flt(abs(amt), precision),
+						"reference_type": self.doctype,
+						"reference_name": self.name,
+					}
+				)
+			else:
+				row.update(
+					{
+						"credit_in_account_currency": flt(abs(amt), precision),
+						"reference_type": self.doctype,
+						"reference_name": self.name,
+					}
+				)
+		    
 
 		if party:
 			row.update(
