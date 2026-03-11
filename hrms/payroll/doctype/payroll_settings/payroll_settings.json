@@ -16,6 +16,7 @@
   "daily_wages_fraction_for_half_day",
   "column_break_rnoq",
   "disable_rounded_total",
+  "secondary_currency",
   "column_break_gzpl",
   "show_leave_balances_in_salary_slip",
   "email_section",
@@ -196,13 +197,19 @@
    "fieldname": "mandatory_benefit_application",
    "fieldtype": "Check",
    "label": "Mandatory Benefit Application"
+  },
+  {
+   "fieldname": "secondary_currency",
+   "fieldtype": "Link",
+   "label": "Secondary Currency",
+   "options": "Currency"
   }
  ],
  "icon": "fa fa-cog",
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2025-09-02 13:28:45.007397",
+ "modified": "2026-03-09 15:08:43.911777",
  "modified_by": "Administrator",
  "module": "Payroll",
  "name": "Payroll Settings",
