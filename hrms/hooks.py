@@ -64,7 +64,7 @@ app_include_css = "hrms.bundle.css"
 
 # include js in doctype views
 doctype_js = {
-	"Employee": "public/js/erpnext/employee.js",
+	"Employee": ["public/js/erpnext/employee.js", "public/js/employee.js"],
 	"Company": "public/js/erpnext/company.js",
 	"Department": "public/js/erpnext/department.js",
 	"Timesheet": "public/js/erpnext/timesheet.js",
@@ -72,6 +72,10 @@ doctype_js = {
 	"Journal Entry": "public/js/erpnext/journal_entry.js",
 	"Delivery Trip": "public/js/erpnext/delivery_trip.js",
 	"Bank Transaction": "public/js/erpnext/bank_transaction.js",
+	"Salary Component": "public/js/salary_component.js",
+	"Salary Structure": "public/js/salary_structure.js",
+	"Salary Slip": "public/js/salary_slip.js",
+	"Payroll Entry": "public/js/payroll_entry.js",
 }
 # doctype_list_js = {"doctype" : "public/js/doctype_list.js"}
 # doctype_tree_js = {"doctype" : "public/js/doctype_tree.js"}
@@ -114,8 +118,8 @@ jinja = {
 # ------------
 
 # before_install = "hrms.install.before_install"
-after_install = "hrms.install.after_install"
-after_migrate = "hrms.setup.update_select_perm_after_install"
+after_install = ["hrms.install.after_install", "hrms.setup.create_payroll_custom_fields"]
+after_migrate = ["hrms.setup.update_select_perm_after_install", "hrms.setup.create_payroll_custom_fields"]
 
 setup_wizard_complete = "hrms.subscription_utils.update_erpnext_access"
 
@@ -170,6 +174,8 @@ override_doctype_class = {
 	"Timesheet": "hrms.overrides.employee_timesheet.EmployeeTimesheet",
 	"Payment Entry": "hrms.overrides.employee_payment_entry.EmployeePaymentEntry",
 	"Project": "hrms.overrides.employee_project.EmployeeProject",
+	"Payroll Entry": "hrms.overrides.payroll_entry_hooks.CustomPayrollEntry",
+	"Salary Slip": "hrms.overrides.salary_slip_hooks.CustomSalarySlip",
 }
 
 # Document Events
@@ -232,6 +238,9 @@ doc_events = {
 	},
 	"Project": {"validate": "hrms.controllers.employee_boarding_controller.update_employee_boarding_status"},
 	"Task": {"on_update": "hrms.controllers.employee_boarding_controller.update_task"},
+	"Salary Slip": {
+		"after_insert": "lebanese_accounting_app.overrides.payroll_entry_hooks.update_payroll_employee_detail_from_salary_slip"
+	},
 }
 
 # Scheduled Tasks
