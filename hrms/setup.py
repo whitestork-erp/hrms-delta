@@ -858,3 +858,4 @@ def get_salary_slip_loan_fields():
 			},
 		],
 	}
+
