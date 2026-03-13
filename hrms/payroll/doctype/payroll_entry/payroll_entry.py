@@ -27,6 +27,7 @@ from erpnext.accounts.doctype.accounting_dimension.accounting_dimension import (
 	get_accounting_dimensions,
 )
 from erpnext.accounts.utils import get_fiscal_year
+from erpnext.setup.utils import get_exchange_rate
 
 from hrms.payroll.doctype.salary_slip.salary_slip_loan_utils import if_lending_app_installed
 from hrms.payroll.doctype.salary_withholding.salary_withholding import link_bank_entry_in_salary_withholdings
@@ -389,10 +390,12 @@ class PayrollEntry(Document):
 		self,
 		component_type=None,
 		employee_wise_accounting_enabled=False,
+		company_currency=None,
 	):
 		salary_components = self.get_salary_components(component_type)
 		if salary_components:
 			component_dict = {}
+			currency_exchange_rates = {}
 
 			for item in salary_components:
 				employee_cost_centers = self.get_payroll_cost_centers_for_employee(
@@ -416,10 +419,26 @@ class PayrollEntry(Document):
 						account_data = self.get_salary_component_account(item.salary_component)
 						payable_account = account_data.payroll_payable_account
 
+						# Calculate Base Amount for Payable Tracking
+						account_currency = frappe.db.get_value(
+							"Account", account_data.account, "account_currency"
+						)
+						exchange_rate = 1
+						if company_currency and account_currency != company_currency:
+							if account_currency in currency_exchange_rates:
+								exchange_rate = currency_exchange_rates[account_currency]
+							else:
+								exchange_rate = get_exchange_rate(
+									account_currency, company_currency, self.posting_date
+								)
+								currency_exchange_rates[account_currency] = exchange_rate
+
+						base_amount = flt(amount_against_cost_center) * flt(exchange_rate)
+
 						self.set_employee_based_payroll_payable_entries(
 							component_type,
 							item.employee,
-							amount_against_cost_center,
+							base_amount,
 							payable_account=payable_account,
 							salary_structure=item.salary_structure,
 						)
@@ -597,35 +616,41 @@ class PayrollEntry(Document):
 		self.employee_salary_structures = {}  # Track salary structure per employee
 		self._advance_deduction_entries = []
 
+		company_currency = erpnext.get_company_currency(self.company)
+
 		earnings_result = self.get_salary_component_total(
 			component_type="earnings",
 			employee_wise_accounting_enabled=employee_wise_accounting_enabled,
+			company_currency=company_currency,
 		)
-		earnings_accounts, earnings_payable_map, earnings_account_to_payable = (
-			earnings_result if earnings_result else ({}, {}, {})
-		)
+		earnings = {}
+		earnings_component_payable_map = {}
+		earnings_account_to_payable = {}
+		if earnings_result:
+			earnings, earnings_component_payable_map, earnings_account_to_payable = earnings_result
 
 		deductions_result = self.get_salary_component_total(
 			component_type="deductions",
 			employee_wise_accounting_enabled=employee_wise_accounting_enabled,
+			company_currency=company_currency,
 		)
-		deductions_accounts, deductions_payable_map, deductions_account_to_payable = (
-			deductions_result if deductions_result else ({}, {}, {})
-		)
+		deductions = {}
+		deductions_component_payable_map = {}
+		deductions_account_to_payable = {}
+		if deductions_result:
+			deductions, deductions_component_payable_map, deductions_account_to_payable = deductions_result
 
 		precision = frappe.get_precision("Journal Entry Account", "debit_in_account_currency")
 
-		if earnings_accounts or deductions_accounts:
+		if earnings or deductions:
 			accounts = []
 			currencies = []
 			payable_amount_by_account = {}  # Track payable by account instead of single amount
 			accounting_dimensions = get_accounting_dimensions() or []
-			company_currency = erpnext.get_company_currency(self.company)
-
 			payable_amount_by_account = self.get_payable_amount_for_earnings_and_deductions(
 				accounts,
-				earnings_accounts,
-				deductions_accounts,
+				earnings,
+				deductions,
 				earnings_account_to_payable,
 				deductions_account_to_payable,
 				currencies,
@@ -727,6 +752,8 @@ class PayrollEntry(Document):
 		precision,
 		payable_amount_by_account,
 	):
+		currency_exchange_rates = {}
+
 		# Earnings - use component-specific payroll payable account
 		for acc_cc, amount in earnings.items():
 			expense_account = acc_cc[0]
@@ -747,9 +774,21 @@ class PayrollEntry(Document):
 			# Get the payroll payable account for this expense account
 			# If component specified a payroll payable account, use it; otherwise use default
 			payable_account = earnings_account_to_payable.get(expense_account) or self.payroll_payable_account
-			payable_amount_by_account[payable_account] = payable_amount_by_account.get(
-				payable_account, 0
-			) + flt(amount, precision)
+
+			# Calculate Base Amount
+			account_currency = frappe.db.get_value("Account", expense_account, "account_currency")
+			exchange_rate = 1
+			if account_currency != company_currency:
+				if account_currency in currency_exchange_rates:
+					exchange_rate = currency_exchange_rates[account_currency]
+				else:
+					exchange_rate = get_exchange_rate(account_currency, company_currency, self.posting_date)
+					currency_exchange_rates[account_currency] = exchange_rate
+			base_amount = flt(amount, precision) * flt(exchange_rate)
+
+			payable_amount_by_account[payable_account] = (
+				payable_amount_by_account.get(payable_account, 0) + base_amount
+			)
 
 		# Deductions - use component-specific payroll payable account
 		for acc_cc, amount in deductions.items():
@@ -773,10 +812,21 @@ class PayrollEntry(Document):
 			payable_account = (
 				deductions_account_to_payable.get(expense_account) or self.payroll_payable_account
 			)
-			# Deductions reduce the payable
-			payable_amount_by_account[payable_account] = payable_amount_by_account.get(
-				payable_account, 0
-			) - flt(amount, precision)
+
+			# Calculate Base Amount
+			account_currency = frappe.db.get_value("Account", expense_account, "account_currency")
+			exchange_rate = 1
+			if account_currency != company_currency:
+				if account_currency in currency_exchange_rates:
+					exchange_rate = currency_exchange_rates[account_currency]
+				else:
+					exchange_rate = get_exchange_rate(account_currency, company_currency, self.posting_date)
+					currency_exchange_rates[account_currency] = exchange_rate
+			base_amount = flt(amount, precision) * flt(exchange_rate)
+
+			payable_amount_by_account[payable_account] = (
+				payable_amount_by_account.get(payable_account, 0) - base_amount
+			)
 
 		return payable_amount_by_account
 
@@ -923,17 +973,42 @@ class PayrollEntry(Document):
 		}
 
 		if entry_type == "debit":
-			payable_amount += flt(amount, precision)
+			# Input amount is in Account Currency
+			# Calculate Base Amount for accumulation
+			base_amount = flt(amount) * flt(exchange_rate)
+			payable_amount += base_amount
+
 			row.update(
 				{
 					"debit_in_account_currency": flt(amt, precision),
 				}
 			)
 		elif entry_type == "credit":
-			payable_amount -= flt(amount, precision)
+			# Input amount is in Account Currency (usually used for Deductions)
+			# Calculate Base Amount for accumulation
+			base_amount = flt(amount) * flt(exchange_rate)
+			payable_amount -= base_amount
+
 			row.update(
 				{
 					"credit_in_account_currency": flt(amt, precision),
+				}
+			)
+		elif entry_type == "payable":
+			# SPECIAL CASE: PAYABLE ENTRY
+			# Input 'amount' is passed as accumulated Base Currency Amount.
+			# We need to calculate the amount in Account Currency.
+			# row['account'] is the Payable Account.
+
+			# exchange_rate is already fetched for the Payable Account.
+			if flt(exchange_rate) and flt(exchange_rate) != 0:
+				credit_amount_in_account_currency = flt(amount) / flt(exchange_rate)
+			else:
+				credit_amount_in_account_currency = flt(amount)
+
+			row.update(
+				{
+					"credit_in_account_currency": flt(credit_amount_in_account_currency, precision),
 				}
 			)
 		else:
@@ -991,8 +1066,7 @@ class PayrollEntry(Document):
 		return row
 
 	def get_amount_and_exchange_rate_for_journal_entry(self, account, amount, company_currency, currencies):
-		conversion_rate = 1
-		exchange_rate = self.exchange_rate
+		exchange_rate = 1
 		account_currency = frappe.db.get_value("Account", account, "account_currency")
 
 		if account_currency not in currencies:
@@ -1002,10 +1076,9 @@ class PayrollEntry(Document):
 			currencies.append(company_currency)
 
 		if account_currency == company_currency:
-			conversion_rate = self.exchange_rate
 			exchange_rate = 1
-
-		amount = flt(amount) * flt(conversion_rate)
+		else:
+			exchange_rate = get_exchange_rate(account_currency, company_currency, self.posting_date)
 
 		return exchange_rate, amount
 
