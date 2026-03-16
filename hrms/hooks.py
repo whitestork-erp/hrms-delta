@@ -176,6 +176,7 @@ override_doctype_class = {
 	"Project": "hrms.overrides.employee_project.EmployeeProject",
 	"Payroll Entry": "hrms.overrides.payroll_entry_hooks.CustomPayrollEntry",
 	"Salary Slip": "hrms.overrides.salary_slip_hooks.CustomSalarySlip",
+	"Employee Advance": "hrms.overrides.employee_advance_hooks.EmployeeAdvanceOverride"
 }
 
 # Document Events
@@ -339,8 +340,6 @@ override_doctype_dashboards = {
 	"Project": "hrms.overrides.dashboard_overrides.get_dashboard_for_project",
 	"Timesheet": "hrms.overrides.dashboard_overrides.get_dashboard_for_timesheet",
 	"Bank Account": "hrms.overrides.dashboard_overrides.get_dashboard_for_bank_account",
-    "Employee Advance": "hrms.overrides.employee_advance_hooks.EmployeeAdvanceOverride"
-
 }
 
 # exempt linked doctypes from being automatically cancelled
