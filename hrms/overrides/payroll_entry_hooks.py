@@ -101,6 +101,22 @@ class CustomPayrollEntry(PayrollEntry):
 	in journal entry creation.
 	"""
 
+	def on_cancel(self):
+		# unlink salary slips connected to the payroll employee details of this payroll entry
+		payroll_employee_details = frappe.get_all(
+			"Payroll Employee Detail",
+			filters={"parent": self.name},
+			fields=["name", "custom_salary_slip"],
+		)
+		for detail in payroll_employee_details:
+			if detail.custom_salary_slip:
+				frappe.db.set_value(
+					"Payroll Employee Detail",
+					detail.name,
+					{"custom_salary_slip": None, "custom_net_pay": 0, "custom_net_pay_company_currency": 0},
+					update_modified=False,
+				)
+
 	def get_salary_components(self, component_type):
 		"""Override to include currency, exchange_rate, and amount_in_company_currency from Salary Detail"""
 		salary_slips = self.get_sal_slip_list(ss_status=1, as_dict=True)
