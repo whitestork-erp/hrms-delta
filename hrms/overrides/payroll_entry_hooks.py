@@ -51,7 +51,6 @@ def update_payroll_employee_detail_from_salary_slip(doc, method):
 		"Payroll Employee Detail",
 		row_name,
 		{
-			"custom_net_pay_currency": secondary_currency or company_currency,
 			"custom_net_pay": custom_net_pay,
 			"custom_net_pay_company_currency": flt(doc.base_net_pay),
 			"custom_salary_slip": doc.name,
