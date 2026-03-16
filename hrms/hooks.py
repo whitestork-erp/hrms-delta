@@ -240,7 +240,7 @@ doc_events = {
 	"Project": {"validate": "hrms.controllers.employee_boarding_controller.update_employee_boarding_status"},
 	"Task": {"on_update": "hrms.controllers.employee_boarding_controller.update_task"},
 	"Salary Slip": {
-		"after_insert": "lebanese_accounting_app.overrides.payroll_entry_hooks.update_payroll_employee_detail_from_salary_slip"
+		"after_insert": "hrms.overrides.payroll_entry_hooks.update_payroll_employee_detail_from_salary_slip"
 	},
 }
 
