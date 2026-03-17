@@ -109,6 +109,7 @@ class CustomPayrollEntry(PayrollEntry):
 			fields=["name", "custom_salary_slip"],
 		)
 		for detail in payroll_employee_details:
+			# unlink and delete salary slips
 			if detail.custom_salary_slip:
 				frappe.db.set_value(
 					"Payroll Employee Detail",
@@ -116,6 +117,8 @@ class CustomPayrollEntry(PayrollEntry):
 					{"custom_salary_slip": None, "custom_net_pay": 0, "custom_net_pay_company_currency": 0},
 					update_modified=False,
 				)
+		# default cancel handels deleting the salary slips
+		super().on_cancel()
 
 	def get_salary_components(self, component_type):
 		"""Override to include currency, exchange_rate, and amount_in_company_currency from Salary Detail"""
