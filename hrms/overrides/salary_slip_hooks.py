@@ -57,6 +57,10 @@ class CustomSalarySlip(SalarySlip):
 
 		return total
 
+	def on_cancel(self):
+		self.ignore_linked_doctypes = ("Payroll Entry",)
+		super().on_cancel()
+
 	@frappe.whitelist()
 	def set_totals(self):
 		"""
