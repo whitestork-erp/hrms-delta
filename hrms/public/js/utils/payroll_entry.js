@@ -22,10 +22,14 @@ frappe.ui.form.on("Payroll Entry", {
 
 		// set secondary currency
 		frappe.call({
-			method: "lebanese_accounting_app.overrides.payroll_entry_hooks.get_secondary_currency",
+			method: "hrms.overrides.payroll_entry_hooks.get_secondary_currency",
 			callback: function (r) {
 				if (r.message) {
 					frm.set_value("custom_secondary_currency", r.message);
+				}
+				else {
+					// hide the field if no secondary currency is set
+					frm.set_df_property("custom_secondary_currency", "hidden", true);
 				}
 			},
 		});
