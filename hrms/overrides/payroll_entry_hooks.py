@@ -155,86 +155,86 @@ class CustomPayrollEntry(PayrollEntry):
 
 			return salary_components
 
-	# def get_salary_component_total(
-	# 	self, component_type=None, employee_wise_accounting_enabled=False, company_currency=None, **kwargs
-	# ):
-	# 	"""
-	# 	Override to use amount_in_company_currency for payable calculations
-	# 	while keeping original amount for the account entry (in component currency).
-	# 	"""
-	# 	salary_components = self.get_salary_components(component_type)
-	# 	if salary_components:
-	# 		component_dict = {}
-	# 		# Track currency info per component for JE creation
-	# 		if not hasattr(self, "_component_currency_map"):
-	# 			self._component_currency_map = {}
+	def get_salary_component_total(
+		self, component_type=None, employee_wise_accounting_enabled=False, company_currency=None, **kwargs
+	):
+		"""
+		Override to use amount_in_company_currency for payable calculations
+		while keeping original amount for the account entry (in component currency).
+		"""
+		salary_components = self.get_salary_components(component_type)
+		if salary_components:
+			component_dict = {}
+			# Track currency info per component for JE creation
+			if not hasattr(self, "_component_currency_map"):
+				self._component_currency_map = {}
 
-	# 		for item in salary_components:
-	# 			employee_cost_centers = self.get_payroll_cost_centers_for_employee(
-	# 				item.employee, item.salary_structure
-	# 			)
-	# 			employee_advance = self.get_advance_deduction(component_type, item)
+			for item in salary_components:
+				employee_cost_centers = self.get_payroll_cost_centers_for_employee(
+					item.employee, item.salary_structure
+				)
+				employee_advance = self.get_advance_deduction(component_type, item)
 
-	# 			# Fetch account data for this component
-	# 			account_data = self.get_salary_component_account(item.salary_component)
-	# 			expense_account = account_data.account
-	# 			payable_account = account_data.payroll_payable_account
+				# Fetch account data for this component
+				account_data = self.get_salary_component_account(item.salary_component)
+				expense_account = account_data.account
+				payable_account = account_data.payroll_payable_account
 
-	# 			# Get the definitive currency from the expense account
-	# 			expense_currency = frappe.db.get_value("Account", expense_account, "account_currency")
-	# 			company_currency = erpnext.get_company_currency(self.company)
+				# Get the definitive currency from the expense account
+				expense_currency = frappe.db.get_value("Account", expense_account, "account_currency")
+				company_currency = erpnext.get_company_currency(self.company)
 
-	# 			# Store currency info for this component
-	# 			if item.salary_component not in self._component_currency_map:
-	# 				exchange_rate = flt(item.exchange_rate)
-	# 				if expense_currency and expense_currency != company_currency and exchange_rate <= 1.0:
-	# 					exchange_rate = get_exchange_rate(
-	# 						expense_currency, company_currency, self.posting_date or self.start_date
-	# 					)
+				# Store currency info for this component
+				if item.salary_component not in self._component_currency_map:
+					exchange_rate = flt(item.exchange_rate)
+					if expense_currency and expense_currency != company_currency and exchange_rate <= 1.0:
+						exchange_rate = get_exchange_rate(
+							expense_currency, company_currency, self.posting_date or self.start_date
+						)
 
-	# 				self._component_currency_map[item.salary_component] = {
-	# 					"currency": expense_currency or company_currency,
-	# 					"exchange_rate": exchange_rate or 1,
-	# 				}
+					self._component_currency_map[item.salary_component] = {
+						"currency": expense_currency or company_currency,
+						"exchange_rate": exchange_rate or 1,
+					}
 
-	# 			for cost_center, percentage in employee_cost_centers.items():
-	# 				# Use amount_in_company_currency for aggregation
-	# 				if item.amount_in_company_currency and flt(item.amount_in_company_currency) != flt(
-	# 					item.amount
-	# 				):
-	# 					company_currency_amount = flt(item.amount_in_company_currency)
-	# 				else:
-	# 					# Fallback for old Salary Slips that don't have amount_in_company_currency properly calculated
-	# 					currency_info = self._component_currency_map[item.salary_component]
-	# 					if currency_info["currency"] != company_currency:
-	# 						company_currency_amount = flt(item.amount) * flt(currency_info["exchange_rate"])
-	# 					else:
-	# 						company_currency_amount = flt(item.amount)
+				for cost_center, percentage in employee_cost_centers.items():
+					# Use amount_in_company_currency for aggregation
+					if item.amount_in_company_currency and flt(item.amount_in_company_currency) != flt(
+						item.amount
+					):
+						company_currency_amount = flt(item.amount_in_company_currency)
+					else:
+						# Fallback for old Salary Slips that don't have amount_in_company_currency properly calculated
+						currency_info = self._component_currency_map[item.salary_component]
+						if currency_info["currency"] != company_currency:
+							company_currency_amount = flt(item.amount) * flt(currency_info["exchange_rate"])
+						else:
+							company_currency_amount = flt(item.amount)
 
-	# 				amount_against_cost_center = company_currency_amount * percentage / 100
+					amount_against_cost_center = company_currency_amount * percentage / 100
 
-	# 				if employee_advance:
-	# 					self.add_advance_deduction_entry(
-	# 						item, amount_against_cost_center, cost_center, employee_advance
-	# 					)
-	# 				else:
-	# 					key = (item.salary_component, cost_center)
-	# 					component_dict[key] = component_dict.get(key, 0) + amount_against_cost_center
+					if employee_advance:
+						self.add_advance_deduction_entry(
+							item, amount_against_cost_center, cost_center, employee_advance
+						)
+					else:
+						key = (item.salary_component, cost_center)
+						component_dict[key] = component_dict.get(key, 0) + amount_against_cost_center
 
-	# 				if employee_wise_accounting_enabled:
-	# 					self.set_employee_based_payroll_payable_entries(
-	# 						component_type,
-	# 						item.employee,
-	# 						amount_against_cost_center,
-	# 						payable_account=payable_account,
-	# 						salary_structure=item.salary_structure,
-	# 					)
+					if employee_wise_accounting_enabled:
+						self.set_employee_based_payroll_payable_entries(
+							component_type,
+							item.employee,
+							amount_against_cost_center,
+							payable_account=payable_account,
+							salary_structure=item.salary_structure,
+						)
 
-	# 		account_details, component_payable_map, account_to_payable_map = self.get_account(
-	# 			component_dict=component_dict
-	# 		)
+			account_details, component_payable_map, account_to_payable_map = self.get_account(
+				component_dict=component_dict
+			)
 
-	# 		return account_details, component_payable_map, account_to_payable_map
+			return account_details, component_payable_map, account_to_payable_map
 
 	def get_amount_and_exchange_rate_for_journal_entry(self, account, amount, company_currency, currencies):
 		"""
