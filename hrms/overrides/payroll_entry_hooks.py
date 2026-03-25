@@ -156,10 +156,7 @@ class CustomPayrollEntry(PayrollEntry):
 			return salary_components
 
 	def get_salary_component_total(
-		self,
-		component_type=None,
-		employee_wise_accounting_enabled=False,
-		company_currency=None,
+		self, component_type=None, employee_wise_accounting_enabled=False, company_currency=None, **kwargs
 	):
 		"""
 		Override to use amount_in_company_currency for payable calculations
