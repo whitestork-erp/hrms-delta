@@ -158,6 +158,7 @@ class CustomPayrollEntry(PayrollEntry):
 		self,
 		component_type=None,
 		employee_wise_accounting_enabled=False,
+		company_currency=None,
 	):
 		"""
 		Override to use amount_in_company_currency for payable calculations
@@ -189,7 +190,7 @@ class CustomPayrollEntry(PayrollEntry):
 				if item.salary_component not in self._component_currency_map:
 					exchange_rate = flt(item.exchange_rate)
 					if expense_currency and expense_currency != company_currency and exchange_rate <= 1.0:
-						from lebanese_accounting_app.overrides.salary_slip_hooks import get_exchange_rate
+						from erpnext.setup.utils import get_exchange_rate
 
 						exchange_rate = get_exchange_rate(
 							expense_currency, company_currency, self.posting_date or self.start_date
@@ -261,9 +262,7 @@ class CustomPayrollEntry(PayrollEntry):
 			# Account is in foreign currency
 			# Amount is in company currency, we need to convert back to account currency
 			# Find the exchange rate for this account's currency
-			from lebanese_accounting_app.overrides.salary_slip_hooks import (
-				get_exchange_rate,
-			)
+			from erpnext.setup.utils import get_exchange_rate
 
 			exchange_rate = get_exchange_rate(
 				account_currency,
