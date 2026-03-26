@@ -25,6 +25,18 @@ frappe.ui.form.on("Employee Advance", {
 				},
 			};
 		});
+
+		frm.set_query("cash_account", function () {
+			return {
+				filters: {
+					root_type: "Asset",
+					is_group: 0,
+					company: frm.doc.company,
+					account_currency: frm.doc.currency,
+					account_type: ["in", ["Cash", "Bank"]],
+				},
+			};
+		});
 	},
 
 	refresh: function (frm) {
