@@ -7,7 +7,7 @@ from datetime import datetime, timedelta
 import frappe
 from frappe import _
 from frappe.model.document import Document
-from frappe.utils import cint, get_datetime
+from frappe.utils import cint, get_datetime, get_time
 
 from hrms.hr.doctype.shift_assignment.shift_assignment import get_actual_start_end_datetime_of_shift
 from hrms.hr.utils import (
@@ -21,6 +21,19 @@ class CheckinRadiusExceededError(frappe.ValidationError):
 	pass
 
 
+def _time_in_range(t, from_time, to_time):
+	"""Return True if time `t` falls within [from_time, to_time].
+
+	Handles overnight ranges where from_time > to_time (crosses midnight).
+	Example: from_time=23:30, to_time=00:30 → 23:45 and 00:15 are both in range.
+	"""
+	if from_time <= to_time:
+		return from_time <= t <= to_time
+	else:
+		# Overnight: valid on the late side OR the early side of midnight
+		return t >= from_time or t <= to_time
+
+
 class EmployeeCheckin(Document):
 	def before_validate(self):
 		self.time = get_datetime(self.time).replace(microsecond=0)
@@ -30,6 +43,7 @@ class EmployeeCheckin(Document):
 		self.validate_duplicate_log()
 		self.validate_time_change()
 		self.fetch_shift()
+		self.apply_force_checkin_log_type()
 		self.set_geolocation()
 		self.validate_distance_from_shift_location()
 
@@ -92,6 +106,46 @@ class EmployeeCheckin(Document):
 			self.shift_start = shift_actual_timings.start_datetime
 			self.shift_end = shift_actual_timings.end_datetime
 			self.overtime_type = shift_actual_timings.overtime_type or None
+
+	def apply_force_checkin_log_type(self):
+		"""Override log_type based on the Shift Type's Force Checkin time-range config.
+
+		Must be called after fetch_shift() so self.shift is already resolved.
+		Skips silently if:
+		  - attendance is already linked (checkin is frozen)
+		  - shift could not be determined (off-shift)
+		  - force_checkin is disabled on the shift type
+		  - checkin time falls outside both force ranges (machine value is kept)
+		"""
+		if self.attendance or not self.shift:
+			return
+
+		shift = frappe.db.get_value(
+			"Shift Type",
+			self.shift,
+			["force_checkin", "force_in_from", "force_in_to", "force_out_from", "force_out_to"],
+			as_dict=True,
+		)
+
+		if not shift or not cint(shift.force_checkin):
+			return
+
+		checkin_time = get_datetime(self.time).time()
+
+		force_in_from = get_time(shift.force_in_from)
+		force_in_to = get_time(shift.force_in_to)
+		force_out_from = get_time(shift.force_out_from)
+		force_out_to = get_time(shift.force_out_to)
+
+		if _time_in_range(checkin_time, force_in_from, force_in_to):
+			self.log_type = "IN"
+			self.in_forced = 1
+			self.out_forced = 0
+		elif _time_in_range(checkin_time, force_out_from, force_out_to):
+			self.log_type = "OUT"
+			self.in_forced = 0
+			self.out_forced = 1
+		# If the time falls in neither range, leave log_type as-is (machine value stands)
 
 	def validate_distance_from_shift_location(self):
 		if not frappe.db.get_single_value("HR Settings", "allow_geolocation_tracking"):

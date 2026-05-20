@@ -33,7 +33,15 @@
   "early_exit_grace_period",
   "overtime_section",
   "allow_overtime",
-  "overtime_type"
+  "overtime_type",
+  "force_checkin_section",
+  "force_checkin",
+  "section_break_nngz",
+  "force_in_from",
+  "force_in_to",
+  "column_break_ypwu",
+  "force_out_from",
+  "force_out_to"
  ],
  "fields": [
   {
@@ -207,11 +215,60 @@
    "label": "Overtime Type",
    "mandatory_depends_on": "eval:doc.allow_overtime == 1",
    "options": "Overtime Type"
+  },
+  {
+   "fieldname": "force_checkin_section",
+   "fieldtype": "Section Break",
+   "label": "Force Checkin"
+  },
+  {
+   "default": "0",
+   "fieldname": "force_checkin",
+   "fieldtype": "Check",
+   "label": "Force checkin"
+  },
+  {
+   "depends_on": "eval:doc.force_checkin;",
+   "fieldname": "section_break_nngz",
+   "fieldtype": "Section Break",
+   "hide_border": 1
+  },
+  {
+   "fieldname": "force_in_from",
+   "fieldtype": "Time",
+   "hide_days": 1,
+   "hide_seconds": 1,
+   "label": "Force IN From "
+  },
+  {
+   "fieldname": "force_in_to",
+   "fieldtype": "Time",
+   "hide_days": 1,
+   "hide_seconds": 1,
+   "label": "Force IN To"
+  },
+  {
+   "fieldname": "column_break_ypwu",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "force_out_from",
+   "fieldtype": "Time",
+   "hide_days": 1,
+   "hide_seconds": 1,
+   "label": "Force OUT From  "
+  },
+  {
+   "fieldname": "force_out_to",
+   "fieldtype": "Time",
+   "hide_days": 1,
+   "hide_seconds": 1,
+   "label": "Force OUT To "
   }
  ],
  "links": [],
- "modified": "2025-12-16 16:32:49.169920",
- "modified_by": "Administrator",
+ "modified": "2026-05-20 17:32:24.461175",
+ "modified_by": "mouhamad.lamaa@gmail.com",
  "module": "HR",
  "name": "Shift Type",
  "naming_rule": "Set by user",

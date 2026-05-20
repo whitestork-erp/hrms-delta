@@ -29,7 +29,10 @@
   "offshift",
   "column_break_vyyt",
   "shift_actual_start",
-  "shift_actual_end"
+  "shift_actual_end",
+  "column_break_dqqq",
+  "in_forced",
+  "out_forced"
  ],
  "fields": [
   {
@@ -182,14 +185,32 @@
    "hidden": 1,
    "label": "Overtime Type",
    "options": "Overtime Type"
+  },
+  {
+   "fieldname": "column_break_dqqq",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "0",
+   "fieldname": "in_forced",
+   "fieldtype": "Check",
+   "label": "IN Forced",
+   "read_only": 1
+  },
+  {
+   "default": "0",
+   "fieldname": "out_forced",
+   "fieldtype": "Check",
+   "label": "OUT Forced",
+   "read_only": 1
   }
  ],
  "links": [],
- "modified": "2025-07-09 10:47:34.591144",
- "modified_by": "Administrator",
+ "modified": "2026-05-20 17:34:04.812898",
+ "modified_by": "mouhamad.lamaa@gmail.com",
  "module": "HR",
  "name": "Employee Checkin",
- "naming_rule": "Expression (old style)",
+ "naming_rule": "Expression",
  "owner": "Administrator",
  "permissions": [
   {
