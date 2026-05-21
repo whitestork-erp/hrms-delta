@@ -79,17 +79,17 @@ class ShiftType(Document):
 		force_in_to = get_time(self.force_in_to)
 		force_out_from = get_time(self.force_out_from)
 		force_out_to = get_time(self.force_out_to)
-		shift_start = get_time(self.start_time)
-		shift_end = get_time(self.end_time)
 
-		# 2. All four force times must lie within the shift window (handles overnight shifts)
+		# 2. All four force times must lie within the *actual* shift window
+		#    (shift start minus early-checkin margin, shift end plus late-checkout margin)
+		actual_start, actual_end = self._get_actual_shift_window()
 		for label, t in [
 			("Force IN From", force_in_from),
 			("Force IN To", force_in_to),
 			("Force OUT From", force_out_from),
 			("Force OUT To", force_out_to),
 		]:
-			self._validate_force_time_within_shift(label, t, shift_start, shift_end)
+			self._validate_force_time_within_shift(label, t, actual_start, actual_end)
 
 		# 3. IN range and OUT range must not overlap (handles midnight-crossing ranges)
 		if _force_ranges_overlap(force_in_from, force_in_to, force_out_from, force_out_to):
@@ -98,17 +98,42 @@ class ShiftType(Document):
 				msg=_("Force IN and Force OUT time ranges must not overlap."),
 			)
 
-	def _validate_force_time_within_shift(self, label, t, shift_start, shift_end):
-		"""Validates that time `t` falls within the shift window [shift_start, shift_end].
-		Correctly handles overnight shifts where shift_end < shift_start (crosses midnight)."""
-		if not time_in_range(t, shift_start, shift_end):
+	def _get_actual_shift_window(self):
+		"""Return (actual_start_time, actual_end_time) for this shift, including the
+		early check-in and late check-out margins defined on the shift type.
+
+		For an overnight shift (end_time < start_time) the end datetime is placed on
+		the following day before the margin is added, so the resulting .time() value
+		wraps correctly across midnight.
+		"""
+		shift_start = get_time(self.start_time)
+		shift_end = get_time(self.end_time)
+
+		# Use a fixed reference date — only the time component matters
+		ref = datetime(2000, 1, 1)
+		actual_start_dt = datetime.combine(ref, shift_start) - timedelta(
+			minutes=cint(self.begin_check_in_before_shift_start_time)
+		)
+
+		# Overnight shift: end is on the next calendar day
+		end_ref = ref + timedelta(days=1) if shift_end < shift_start else ref
+		actual_end_dt = datetime.combine(end_ref, shift_end) + timedelta(
+			minutes=cint(self.allow_check_out_after_shift_end_time)
+		)
+
+		return actual_start_dt.time(), actual_end_dt.time()
+
+	def _validate_force_time_within_shift(self, label, t, actual_start, actual_end):
+		"""Validate that time `t` falls within [actual_start, actual_end].
+		Handles overnight windows where actual_end < actual_start (crosses midnight)."""
+		if not time_in_range(t, actual_start, actual_end):
 			frappe.throw(
 				title=_("Force Checkin Time Out of Shift Window"),
-				msg=_("{0} ({1}) must fall within the shift timings ({2} – {3}).").format(
+				msg=_("{0} ({1}) must fall within the allowed checkin window ({2} – {3}).").format(
 					frappe.bold(_(label)),
 					t.strftime("%H:%M"),
-					shift_start.strftime("%H:%M"),
-					shift_end.strftime("%H:%M"),
+					actual_start.strftime("%H:%M"),
+					actual_end.strftime("%H:%M"),
 				),
 			)
 

@@ -26,13 +26,13 @@
   "shift_timings_section",
   "shift_start",
   "shift_end",
+  "in_forced",
+  "out_forced",
   "offshift",
   "column_break_vyyt",
   "shift_actual_start",
   "shift_actual_end",
-  "column_break_dqqq",
-  "in_forced",
-  "out_forced"
+  "column_break_dqqq"
  ],
  "fields": [
   {
@@ -192,6 +192,7 @@
   },
   {
    "default": "0",
+   "depends_on": "eval:doc.in_forced;",
    "fieldname": "in_forced",
    "fieldtype": "Check",
    "label": "IN Forced",
@@ -199,6 +200,7 @@
   },
   {
    "default": "0",
+   "depends_on": "eval:doc.out_forced",
    "fieldname": "out_forced",
    "fieldtype": "Check",
    "label": "OUT Forced",
@@ -206,7 +208,7 @@
   }
  ],
  "links": [],
- "modified": "2026-05-20 17:34:04.812898",
+ "modified": "2026-05-21 10:18:56.781669",
  "modified_by": "mouhamad.lamaa@gmail.com",
  "module": "HR",
  "name": "Employee Checkin",
