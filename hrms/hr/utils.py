@@ -1032,3 +1032,16 @@ def get_semester_end(date):
 		return get_year_ending(date)
 	else:
 		return add_months(get_year_ending(date), -6)
+
+
+def time_in_range(t, from_time, to_time):
+	"""Return True if time `t` falls within [from_time, to_time].
+
+	Handles overnight ranges where from_time > to_time (crosses midnight).
+	Example: from_time=23:30, to_time=00:30 → 23:45 and 00:15 are both in range.
+	"""
+	if from_time <= to_time:
+		return from_time <= t <= to_time
+	else:
+		# Overnight: valid on the late side OR the early side of midnight
+		return t >= from_time or t <= to_time

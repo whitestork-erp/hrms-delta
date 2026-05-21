@@ -29,10 +29,26 @@ from hrms.hr.doctype.employee_checkin.employee_checkin import (
 	mark_attendance_and_link_log,
 )
 from hrms.hr.doctype.shift_assignment.shift_assignment import get_employee_shift, get_shift_details
+from hrms.hr.utils import time_in_range
 from hrms.utils import get_date_range
 from hrms.utils.holiday_list import get_holiday_dates_between
 
 EMPLOYEE_CHUNK_SIZE = 50
+
+
+
+def _force_ranges_overlap(in_from, in_to, out_from, out_to):
+	"""Return True if the Force IN range and Force OUT range overlap.
+
+	Works for both same-day and midnight-crossing ranges.
+	Two ranges overlap when at least one endpoint of either range falls inside the other.
+	"""
+	return (
+		time_in_range(in_from, out_from, out_to)
+		or time_in_range(in_to, out_from, out_to)
+		or time_in_range(out_from, in_from, in_to)
+		or time_in_range(out_to, in_from, in_to)
+	)
 
 
 class ShiftType(Document):
@@ -42,6 +58,59 @@ class ShiftType(Document):
 		self.validate_same_start_and_end(start, end)
 		self.validate_circular_shift(start, end)
 		self.validate_unlinked_logs()
+		self.validate_force_timings()
+
+	def validate_force_timings(self):
+		if not cint(self.force_checkin):
+			return
+
+		# 1. All four fields must be filled
+		required = ["force_in_from", "force_in_to", "force_out_from", "force_out_to"]
+		missing = [self.meta.get_label(f) for f in required if not self.get(f)]
+		if missing:
+			frappe.throw(
+				title=_("Force Checkin Configuration Incomplete"),
+				msg=_("Please set all four Force Checkin time fields: {0}").format(
+					", ".join(frappe.bold(m) for m in missing)
+				),
+			)
+
+		force_in_from = get_time(self.force_in_from)
+		force_in_to = get_time(self.force_in_to)
+		force_out_from = get_time(self.force_out_from)
+		force_out_to = get_time(self.force_out_to)
+		shift_start = get_time(self.start_time)
+		shift_end = get_time(self.end_time)
+
+		# 2. All four force times must lie within the shift window (handles overnight shifts)
+		for label, t in [
+			("Force IN From", force_in_from),
+			("Force IN To", force_in_to),
+			("Force OUT From", force_out_from),
+			("Force OUT To", force_out_to),
+		]:
+			self._validate_force_time_within_shift(label, t, shift_start, shift_end)
+
+		# 3. IN range and OUT range must not overlap (handles midnight-crossing ranges)
+		if _force_ranges_overlap(force_in_from, force_in_to, force_out_from, force_out_to):
+			frappe.throw(
+				title=_("Overlapping Force Checkin Ranges"),
+				msg=_("Force IN and Force OUT time ranges must not overlap."),
+			)
+
+	def _validate_force_time_within_shift(self, label, t, shift_start, shift_end):
+		"""Validates that time `t` falls within the shift window [shift_start, shift_end].
+		Correctly handles overnight shifts where shift_end < shift_start (crosses midnight)."""
+		if not time_in_range(t, shift_start, shift_end):
+			frappe.throw(
+				title=_("Force Checkin Time Out of Shift Window"),
+				msg=_("{0} ({1}) must fall within the shift timings ({2} – {3}).").format(
+					frappe.bold(_(label)),
+					t.strftime("%H:%M"),
+					shift_start.strftime("%H:%M"),
+					shift_end.strftime("%H:%M"),
+				),
+			)
 
 	def validate_same_start_and_end(self, start_time: datetime.time, end_time: datetime.time):
 		if start_time == end_time:
