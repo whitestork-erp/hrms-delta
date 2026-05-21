@@ -29,24 +29,12 @@ from hrms.hr.doctype.employee_checkin.employee_checkin import (
 	mark_attendance_and_link_log,
 )
 from hrms.hr.doctype.shift_assignment.shift_assignment import get_employee_shift, get_shift_details
+from hrms.hr.utils import time_in_range
 from hrms.utils import get_date_range
 from hrms.utils.holiday_list import get_holiday_dates_between
 
 EMPLOYEE_CHUNK_SIZE = 50
 
-
-def _time_in_range(t, from_time, to_time):
-	"""Return True if time `t` falls within [from_time, to_time].
-
-	Handles overnight ranges where from_time > to_time (i.e. the range crosses midnight).
-	Example: from_time=23:30, to_time=00:30 → 23:45 and 00:15 are both inside the range.
-	"""
-	if from_time <= to_time:
-		# Normal same-day range
-		return from_time <= t <= to_time
-	else:
-		# Overnight range: valid on either side of midnight
-		return t >= from_time or t <= to_time
 
 
 def _force_ranges_overlap(in_from, in_to, out_from, out_to):
@@ -56,10 +44,10 @@ def _force_ranges_overlap(in_from, in_to, out_from, out_to):
 	Two ranges overlap when at least one endpoint of either range falls inside the other.
 	"""
 	return (
-		_time_in_range(in_from, out_from, out_to)
-		or _time_in_range(in_to, out_from, out_to)
-		or _time_in_range(out_from, in_from, in_to)
-		or _time_in_range(out_to, in_from, in_to)
+		time_in_range(in_from, out_from, out_to)
+		or time_in_range(in_to, out_from, out_to)
+		or time_in_range(out_from, in_from, in_to)
+		or time_in_range(out_to, in_from, in_to)
 	)
 
 
@@ -113,7 +101,7 @@ class ShiftType(Document):
 	def _validate_force_time_within_shift(self, label, t, shift_start, shift_end):
 		"""Validates that time `t` falls within the shift window [shift_start, shift_end].
 		Correctly handles overnight shifts where shift_end < shift_start (crosses midnight)."""
-		if not _time_in_range(t, shift_start, shift_end):
+		if not time_in_range(t, shift_start, shift_end):
 			frappe.throw(
 				title=_("Force Checkin Time Out of Shift Window"),
 				msg=_("{0} ({1}) must fall within the shift timings ({2} – {3}).").format(

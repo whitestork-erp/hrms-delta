@@ -13,25 +13,13 @@ from hrms.hr.doctype.shift_assignment.shift_assignment import get_actual_start_e
 from hrms.hr.utils import (
 	get_distance_between_coordinates,
 	set_geolocation_from_coordinates,
+	time_in_range,
 	validate_active_employee,
 )
 
 
 class CheckinRadiusExceededError(frappe.ValidationError):
 	pass
-
-
-def _time_in_range(t, from_time, to_time):
-	"""Return True if time `t` falls within [from_time, to_time].
-
-	Handles overnight ranges where from_time > to_time (crosses midnight).
-	Example: from_time=23:30, to_time=00:30 → 23:45 and 00:15 are both in range.
-	"""
-	if from_time <= to_time:
-		return from_time <= t <= to_time
-	else:
-		# Overnight: valid on the late side OR the early side of midnight
-		return t >= from_time or t <= to_time
 
 
 class EmployeeCheckin(Document):
@@ -137,11 +125,13 @@ class EmployeeCheckin(Document):
 		force_out_from = get_time(shift.force_out_from)
 		force_out_to = get_time(shift.force_out_to)
 
-		if _time_in_range(checkin_time, force_in_from, force_in_to):
+		if time_in_range(checkin_time, force_in_from, force_in_to):
 			self.log_type = "IN"
 			self.in_forced = 1
 			self.out_forced = 0
-		elif _time_in_range(checkin_time, force_out_from, force_out_to):
+			# add comment to the document
+
+		elif time_in_range(checkin_time, force_out_from, force_out_to):
 			self.log_type = "OUT"
 			self.in_forced = 0
 			self.out_forced = 1
