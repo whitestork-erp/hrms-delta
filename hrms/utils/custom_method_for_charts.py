@@ -11,7 +11,7 @@ from hrms.utils.holiday_list import get_assigned_holiday_list
 def get_upcoming_holidays():
 	employee = frappe.get_value("Employee", {"user_id": frappe.session.user}, "name")
 	if employee:
-		holiday_list = get_holiday_list_for_employee(employee, raise_exception=False, as_on=getdate())
+		holiday_list = get_holiday_list_for_employee(employee, raise_exception=False)
 	else:
 		default_company = get_default_company()
 		holiday_list = get_assigned_holiday_list(default_company, as_on=getdate())
