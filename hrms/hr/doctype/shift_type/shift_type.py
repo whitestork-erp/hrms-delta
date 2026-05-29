@@ -503,7 +503,7 @@ class ShiftType(Document):
 		return list(set(assigned_employees) - set(inactive_employees))
 
 	def get_holiday_list(self, employee: str, date=None) -> str:
-		holiday_list_name = self.holiday_list or get_holiday_list_for_employee(employee, False, as_on=date)
+		holiday_list_name = self.holiday_list or get_holiday_list_for_employee(employee, False)
 		return holiday_list_name
 
 	def should_mark_attendance(self, employee: str, attendance_date: str) -> bool:
